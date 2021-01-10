@@ -38,16 +38,10 @@ double _get_meas(double x, double y, double ori){
         while(grid
             [x+(cos(ori)*(dx+ret))]
             [y+(sin(ori)*(dx+ret))]==false) {
-                // ++i;
                 ret+=dx;
             }
         dx/=2;
-    }
-    // i--;
-
-
     return ret;
-    // return dx*i;
 }
 
 void init_pop(size_t N){
@@ -67,14 +61,10 @@ void init_pop(size_t N){
     py::print("initialized weights");
 }
 
-// vector<vector<double>> get_pop(){
 py::array get_pop(){
     // py::print(__func__,"flush"_a=true);
     vector<vector<double>> ret;
     for (const auto& p : pop) ret.push_back({p.x,p.y,p.ori});
-    // return ret;
-    // py::array tmp = py::cast(ret);
-    // return tmp;
     return py::cast(ret);
 }
 
@@ -100,7 +90,7 @@ void update_weights(double meas){
             }
         double m = _get_meas(pop[i].x,pop[i].y,pop[i].ori);
 
-        weights[i] = weights[i]*(1.-(double)fabs(meas-m)/grid.size());
+        weights[i] = weights[i]*(1.-(double)fabs(meas-m)/grid.size()/sqrt(2.));
         sum+=weights[i];
     }
     for(auto& w : weights) w/=sum;
@@ -112,26 +102,6 @@ double get_effective_N(){
     for (auto& w:weights) sum+=w*w;
     return 1./sum;
 }
-
-// void set_weights(double meas){
-//     // py::print("Resizing");
-//     weights.resize(pop.size());
-//     // py::print("Resized");
-//     for (size_t i = 0;i<pop.size();++i){
-//     // py::print("i:",i);
-//         if (pop[i].x < 0 || pop[i].x > grid.size() ||
-//             pop[i].y < 0 || pop[i].y > grid[0].size() ||
-//             grid[(int)pop[i].x][(int)pop[i].y]){
-//                 weights[i]=0;
-//                 continue;
-//             }
-//         double m = _get_meas(pop[i].x,pop[i].y,pop[i].ori);
-//     // py::print("m:",m);
-//         weights[i] = grid.size()-fabs(meas-m);
-//         // weights[i] = fabs(meas-m);
-//     // py::print("weights[i]:",weights[i]);
-//     }
-// }
 
 enum RESAMPLE_TYPE{
     ROULETTE_WHEEL,
@@ -158,9 +128,7 @@ void resample(RESAMPLE_TYPE type){
                 j++;
             }
             new_pop.push_back(pop[j]);
-            // py::print('ADD',j);
         }
-        // py::print("SUS:",pop.size(),new_pop.size());
     }
     pop = new_pop;
     for (auto& w: weights) w=1./pop.size();
@@ -168,40 +136,23 @@ void resample(RESAMPLE_TYPE type){
 
 void drift(double dori){
     // py::print(__func__,"flush"_a=true);
-    // py::print("Drifting hehe");
     for(auto &p : pop){
-        // py::print("elem:",p.x,p.y,"flush"_a=true);
-        // py::print("poss:",(int)p.x,(int)p.y,(int)grid[(int)p.x][(int)p.y],"flush"_a=true);
-        // // py::print("poss:",(int)(p.x < 0),(int)p.y,"flush"_a=true);
         if (p.x < 0 || p.x >= grid.size() ||
             p.y < 0 || p.y >= grid[0].size() ||
             grid[(int)p.x][(int)p.y]) continue;
-        // py::print("process","flush"_a=true);
-        // py::print("process2","flush"_a=true);
         p.ori += dori;
         double tmpx = p.x + cos(p.ori)*model.vel;
         double tmpy = p.y + sin(p.ori)*model.vel;
-        // py::print("adin","flush"_a=true);
-        // py::print("poss:",(int)tmpx,(int)tmpy,"flush"_a=true);
-        // // py::print("size: ",grid.size());
-        // // py::print("size2:",grid[0].size());
-        // // py::print("size3:",grid[(int)tmpx].size());
-        // py::print("grid:",(int)grid[(int)tmpx][(int)tmpy],"flush"_a=true);
-        // // py::print("done");
-        
         if (grid[(int)tmpx][(int)tmpy]) p.ori += PI;
-        // py::print("dva","flush"_a=true);
         p.x += cos(p.ori)*model.vel;
         p.y += sin(p.ori)*model.vel;
     }
-    // py::print(__func__,"done","flush"_a=true);
 }
 
 py::tuple get_est(){
     // py::print(__func__,"flush"_a=true);
     double x=0,y=0,orix=0,oriy=0;
     for(size_t i = 0; i<pop.size();++i){
-    // for(const auto &p : pop){
         orix+=cos(pop[i].ori)*weights[i];
         oriy+=sin(pop[i].ori)*weights[i];
         x+=pop[i].x*weights[i];
@@ -209,16 +160,10 @@ py::tuple get_est(){
     }
     double sum = 0;
     for (const auto& w: weights) sum+=w;
-    // py::array_t<double> ret(3);
-    // ret[0] = x/pop.size();
-    // ret[1] = y/pop.size();
-    // ret[2] = atan2(oriy,orix);
-    // return ret;
     x /= sum;
     y /= sum;
     orix /= sum;
     oriy /= sum;
-    // return py::make_tuple(x/pop.size(),y/pop.size(),atan2(oriy,orix));
     return py::make_tuple(x,y,atan2(oriy,orix));
 }
 
@@ -244,8 +189,6 @@ void add_circle(py::tuple pos,float radius){
             float y2=(pos[1].cast<float>()-y);
             if(x2*x2+y2*y2 <= radius*radius)
                 grid[x][y] = true;
-            // else grid[x][y] = false;
-            // grid[x][y] = false;
         }
     }
 }
@@ -259,8 +202,6 @@ void add_box(py::tuple pos, py::tuple size){
 }
 
 py::array get_grid(){
-    // py::print(__func__,"flush"_a=true);
-// vector<vector<bool>> get_grid(){
     return py::cast(grid);
 }
 
