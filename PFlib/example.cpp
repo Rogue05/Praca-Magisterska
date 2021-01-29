@@ -13,6 +13,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 vector<vector<bool>> grid;
+// vector<vector<vector<bool>>> tree;
 
 struct State{
     double x,y,ori;
@@ -24,7 +25,6 @@ struct Model : State{
 
 std::vector<State> pop;
 std::vector<double> weights;
-
 std::default_random_engine gen;
 
 const double PI  = 3.141592653589793238463;
@@ -41,6 +41,7 @@ double _get_meas(double x, double y, double ori){
                 ret+=dx;
             }
         dx/=2;
+    }
     return ret;
 }
 
@@ -181,42 +182,61 @@ void diffuse(double sigp, double sigori){
     }
 }
 
-void add_circle(py::tuple pos,float radius){
-    py::print(__func__,"flush"_a=true);
-    for(size_t x=0;x<grid.size();++x){
-        for(size_t y=0;y<grid.size();++y){
-            float x2=(pos[0].cast<float>()-x);
-            float y2=(pos[1].cast<float>()-y);
-            if(x2*x2+y2*y2 <= radius*radius)
-                grid[x][y] = true;
+class Map{
+    vector<vector<bool>> grid;
+    public:
+    void add_circle(py::tuple pos,float radius){
+        py::print(__func__,"flush"_a=true);
+        for(size_t x=0;x<grid.size();++x){
+            for(size_t y=0;y<grid.size();++y){
+                float x2=(pos[0].cast<float>()-x);
+                float y2=(pos[1].cast<float>()-y);
+                if(x2*x2+y2*y2 <= radius*radius)
+                    grid[x][y] = true;
+            }
         }
     }
-}
 
-void add_box(py::tuple pos, py::tuple size){
-    // py::print(__func__,"flush"_a=true);
-    for (int x=pos[0].cast<int>();x<pos[0].cast<int>()+size[0].cast<int>();++x)
-        for (int y=pos[1].cast<int>();y<pos[1].cast<int>()+size[1].cast<int>();++y)
-            if (x>=0 && y>=0 && x<grid.size() && y<grid.size())
-                grid[x][y]=true;
-}
+    void add_box(py::tuple pos, py::tuple size){
+        // py::print(__func__,"flush"_a=true);
+        for (int x=pos[0].cast<int>();x<pos[0].cast<int>()+size[0].cast<int>();++x)
+            for (int y=pos[1].cast<int>();y<pos[1].cast<int>()+size[1].cast<int>();++y)
+                if (x>=0 && y>=0 && x<grid.size() && y<grid.size())
+                    grid[x][y]=true;
+    }
 
-py::array get_grid(){
-    return py::cast(grid);
-}
-
-void setup_map(size_t x,size_t y,size_t margin) {
-    // py::print(__func__,"flush"_a=true);
-    grid.resize(x);
-    for (size_t i =0;i<x;++i) grid[i].resize(y);
+    py::array get(){
+        return py::cast(grid);
+    }
     
-    for(size_t x=0;x<grid.size();++x){
-        for(size_t y=0;y<grid[0].size();++y){
-            if (x<margin || x>grid.size()-margin || y<margin || y>grid[0].size()-margin)
-                grid[x][y] = true;
-            else grid[x][y]=false;
+    vector<vector<bool>> get_raw(){
+        return grid;
+    }
+
+    void setup(size_t x,size_t y,size_t margin) {
+        // py::print(__func__,"flush"_a=true);
+        grid.resize(x);
+        for (size_t i =0;i<x;++i) grid[i].resize(y);
+        
+        for(size_t x=0;x<grid.size();++x){
+            for(size_t y=0;y<grid[0].size();++y){
+                if (x<margin || x>grid.size()-margin || y<margin || y>grid[0].size()-margin)
+                    grid[x][y] = true;
+                else grid[x][y]=false;
+            }
         }
     }
+};
+
+void tmp_set_map(Map &map){
+    grid = map.get_raw();
+}
+
+struct ParticleFilter{
+    vector<vector<bool>> map;
+    void set_map(Map &mapc){
+        map = mapc.get_raw();
+    };
 }
 
 PYBIND11_MODULE(PFlib, m){
@@ -236,8 +256,16 @@ PYBIND11_MODULE(PFlib, m){
     m.def("resample", &resample, "PAss");
     m.def("drift", &drift, "PAss");
     m.def("diffuse", &diffuse, "PAss");
-    m.def("add_box", &add_box, "PAss");
-    m.def("add_circle", &add_circle, "PAss");
-    m.def("setup_map", &setup_map, "PAss");
-    m.def("get_grid", &get_grid, "PAss");
+    // m.def("add_box", &add_box, "PAss");
+    // m.def("add_circle", &add_circle, "PAss");
+    // m.def("setup_map", &setup_map, "PAss");
+    // m.def("get_grid", &get_grid, "PAss");
+    py::class_<Map>(m, "Map")
+        .def(py::init<>())
+        .def("add_box", &Map::add_box)
+        .def("add_circle", &Map::add_circle)
+        .def("setup", &Map::setup)
+        .def("get", &Map::get);
+        
+    m.def("tmp_set_map", &tmp_set_map, "PAss");
 }
