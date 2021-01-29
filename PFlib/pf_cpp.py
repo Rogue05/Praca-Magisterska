@@ -50,7 +50,7 @@ grid = np.logical_not(pf.get_grid().T)
 pos = np.array([map_size/2,map_size/2])
 ori = 0
 # vel = 10
-vel = 1
+vel = 10/2
 
 # dori = np.pi/70
 dori = -np.pi/30
@@ -102,7 +102,7 @@ posline, = plt.plot([],[],'.r',ms=15)
 estline, = plt.plot([],[],'.y',ms=15)
 
 oris = []
-step=np.pi/5
+step=np.pi/5/2
 alpha_mask = grid.astype(np.float32)
 for i in range(1000):
 # for i in range(300):
@@ -116,8 +116,8 @@ for i in range(1000):
     # dori -= ori/10000
     # vel -= ori/100
 
-    # dori = np.random.uniform(-step,step)
-    dori = -np.pi/30
+    dori = np.random.uniform(-step,step)
+    # dori = -np.pi/30
 
     pf.set_model(*pos,ori,vel)
     m = pf._get_meas(*pos,ori)
@@ -161,36 +161,36 @@ for i in range(1000):
 
 
 
-    # if True:
-    # # if i%10==9:
-    #     pop = pf.get_pop()
-    #     plt.axis('equal')
-    #     # plt.title(str(i)+' '+str(errs[-1]))
-    #     plt.imshow(grid,cmap='gray')
-    #     plt.scatter(pop[:,0],pop[:,1],s=1,alpha=1000/pop_size)
-    #     # plt.plot(pop[:,0],pop[:,1],'.b',alpha=1000/pop_size,ms=1)
-    #     # blue_cm = cm.Blues
-    #     # blue_cm.set_under('w',1)
-    #     # plt.hist2d(pop[:,0],pop[:,1],
-    #     #            bins=np.linspace(0,map_size,map_size*2),
-    #     #            cmap=blue_cm,
-    #     #             # cmin=.1,
-    #     #            density=True)
-    #     # plt.imshow(grid,cmap='gray')
+    # # if True:
+    # # # if i%10==9:
+    # pop = pf.get_pop()
+    # plt.axis('equal')
+    # # plt.title(str(i)+' '+str(errs[-1]))
+    # plt.imshow(grid,cmap='gray')
+    # plt.scatter(pop[:,0],pop[:,1],s=1,alpha=1000/pop_size)
+    # # plt.plot(pop[:,0],pop[:,1],'.b',alpha=1000/pop_size,ms=1)
+    # # blue_cm = cm.Blues
+    # # blue_cm.set_under('w',1)
+    # # plt.hist2d(pop[:,0],pop[:,1],
+    # #            bins=np.linspace(0,map_size,map_size*2),
+    # #            cmap=blue_cm,
+    # #             # cmin=.1,
+    # #            density=True)
+    # # plt.imshow(grid,cmap='gray')
 
-    #     plt.hist2d(pop[:,0],pop[:,1],bins=np.linspace(0,map_size,100))
-    #     plt.imshow(grid,cmap='gray')
-    #     plt.plot(*prev,'.r')
-    #     plt.plot(*pest[:2],'.k')
-    #     # print(np.argmax(H))
-    #     # ind = np.unravel_index(np.argmax(H, axis=None), H.shape)
-    #     # print(ind)
-    #     # bgm = BayesianGaussianMixture(n_components=2).fit(pop[:,:2])
-    #     # plt.plot(bgm.means_[:,0],bgm.means_[:,1],'k.')
+    # plt.hist2d(pop[:,0],pop[:,1],bins=np.linspace(0,map_size,100))
+    # plt.imshow(grid,cmap='gray')
+    # plt.plot(*prev,'.r')
+    # plt.plot(*pest[:2],'.k')
+    # # print(np.argmax(H))
+    # # ind = np.unravel_index(np.argmax(H, axis=None), H.shape)
+    # # print(ind)
+    # # bgm = BayesianGaussianMixture(n_components=2).fit(pop[:,:2])
+    # # plt.plot(bgm.means_[:,0],bgm.means_[:,1],'k.')
 
-    #     plt.xlim([0,map_size])
-    #     plt.ylim([0,map_size])
-    #     plt.show()
+    # plt.xlim([0,map_size])
+    # plt.ylim([0,map_size])
+    # plt.show()
 
 def init():
     points.set_data([],[])
