@@ -46,7 +46,6 @@ mapa.add_box(pos,size)
 # plt.ylim([0,map_size])
 
 ##============================SYMULACJA
-
 fir = pf.ParticleFilter()
 
 grid = np.logical_not(mapa.get().T)
@@ -56,12 +55,14 @@ ori = 0
 # vel = 10
 # vel = 10/2
 vel = 1
+model = pf.Model(*pos,ori,vel)
 
 # dori = np.pi/70
 dori = -np.pi/30
 
 pop_size = 10000
-fir.set_map(mapa)
+model.set_map(mapa)
+fir.set_model(model)
 fir.setup(pop_size)
 
 errs = []
@@ -95,6 +96,8 @@ def print_err():
 poss = []
 ests = []
 
+plt.ion()
+fig = plt.figure(figsize=(8,8))
 plt.axis('equal')
 plt.xlim([0,map_size])
 plt.ylim([0,map_size])
@@ -104,6 +107,7 @@ points, = plt.plot([],[],'.b',alpha=0.01)
 
 posline, = plt.plot([],[],'.r',ms=15)
 estline, = plt.plot([],[],'.y',ms=15)
+plt.show()
 
 oris = []
 step=np.pi/5/2
@@ -113,12 +117,14 @@ for i in range(1000):
 # def animate(i):
     # global dori,ori
     print(i,pos,ori,flush=True)
+    if not plt.fignum_exists(fig.number):
+        break;
 
     dori = np.random.uniform(-step,step)
     # dori = -np.pi/30
 
-    fir.set_model(*pos,ori,vel)
-    m = fir._get_meas(*pos,ori)
+    model.set(*pos,ori,vel)
+    m = model.get_meas()
 
     fir.update_weights(m)
 
@@ -158,29 +164,30 @@ for i in range(1000):
     ests.append(pest[:2])
 
 
-    # pop = pf.get_pop()
-    # points.set_data(pop[:,0],pop[:,1])
-    # posline.set_data(*prev)
-    # estline.set_data(*pest[:2])
+    pop = fir.get_pop()
+    points.set_data(pop[:,0],pop[:,1])
+    posline.set_data(*prev)
+    estline.set_data(*pest[:2])
 
     # return points,posline,estline
 
+    fig.canvas.draw()
+    fig.canvas.flush_events()
 
+    # # if True:
+    # # # if i%10==9:
+    # pop = fir.get_pop()
+    # plt.axis('equal')
+    # # plt.title(str(i)+' '+str(errs[-1]))
+    # plt.imshow(grid,cmap='gray')
+    # plt.scatter(pop[:,0],pop[:,1],s=1,alpha=1000/pop_size)
+    # plt.imshow(grid,cmap='gray')
+    # plt.plot(*prev,'.r')
+    # plt.plot(*pest[:2],'.k')
 
-    # if True:
-    # # if i%10==9:
-    pop = fir.get_pop()
-    plt.axis('equal')
-    # plt.title(str(i)+' '+str(errs[-1]))
-    plt.imshow(grid,cmap='gray')
-    plt.scatter(pop[:,0],pop[:,1],s=1,alpha=1000/pop_size)
-    plt.imshow(grid,cmap='gray')
-    plt.plot(*prev,'.r')
-    plt.plot(*pest[:2],'.k')
-
-    plt.xlim([0,map_size])
-    plt.ylim([0,map_size])
-    plt.show()
+    # plt.xlim([0,map_size])
+    # plt.ylim([0,map_size])
+    # plt.show()
 
 def init():
     points.set_data([],[])

@@ -12,13 +12,13 @@ using namespace std;
 namespace py = pybind11;
 using namespace pybind11::literals;
 
-struct State{
-    double x,y,ori;
-};
+// struct State{
+//     double x,y,ori;
+// };
 
-struct Model : State{
-    double vel;
-} model;
+// struct RealState : State{
+//     double vel;
+// } model;
 
 std::default_random_engine gen;
 
@@ -33,7 +33,7 @@ enum RESAMPLE_TYPE{
 
 class Map{
     vector<vector<bool>> grid;
-    public:
+public:
     void add_circle(py::tuple pos,float radius){
         py::print(__func__,"flush"_a=true);
         for(size_t x=0;x<grid.size();++x){
@@ -77,11 +77,92 @@ class Map{
     }
     
 };
+// "shell_cmd": "D:\\ProgramData\\Anaconda3\\python.exe"
+    
+struct Model{
+    struct State{
+        double x,y,ori;
+    } real_state;
+    double vel;
+
+    vector<vector<bool>> grid;
+
+    Model(): real_state({0,0,0}), vel(0){}
+    Model(double x_, double y_, double z_, double vel_): real_state({x_, y_, z_}), vel(vel_){}
+
+    // double _get_meas(double x, double y, double ori){
+    double _get_meas(const State &st){
+        int i = 0;
+        double dx = 1,ret=0;
+
+        while(dx>1e-3){
+            while(grid
+                [st.x+(cos(st.ori)*(dx+ret))]
+                [st.y+(sin(st.ori)*(dx+ret))]==false) {
+                    ret+=dx;
+                }
+            dx/=2;
+        }
+        return ret;
+    }
+
+    vector<vector<bool>>& get_grid(){return grid;}
+
+    double get_meas(){
+        return _get_meas(real_state);
+    }
+
+    void set_map(Map &mapc){
+        grid = mapc.get_raw();
+    }
+
+    void set(double x, double y, double ori, double vel_){
+        // py::print(__func__,"flush"_a=true);
+        real_state.x = x;
+        real_state.y = y;
+        real_state.ori = ori;
+        vel = vel_;
+    }
+
+    void evolve(State &st, double sigp, double sigori){
+        // py::print(__func__,"flush"_a=true);
+        static std::normal_distribution<double> dp(0,sigp), dori(0,sigori);
+        // for(auto &p : pop){
+        st.ori += dori(gen);
+        st.x += dp(gen);
+        st.y += dp(gen);
+        if (st.x<0.) st.x=0.;
+        if (st.y<0.) st.y=0.;
+        if (st.x>=grid.size()) st.x=grid.size()-1;
+        if (st.y>=grid[0].size()) st.y=grid[0].size()-1;
+        // }
+    }
+
+    void drift(State &p, double dori){
+        // py::print("elem",p.x,p.y,"flush"_a=true);
+        // py::print((int)p.x,(int)p.y);
+        // py::print((int)grid[(int)p.x][(int)p.y]);
+        if (p.x < 0 || p.x >= grid.size() ||
+            p.y < 0 || p.y >= grid[0].size() ||
+            grid[(int)p.x][(int)p.y]) return;
+        // py::print("go","flush"_a=true);
+        p.ori += dori;
+        double tmpx = p.x + cos(p.ori)*vel;
+        double tmpy = p.y + sin(p.ori)*vel;
+        // if (grid[(int)tmpx][(int)tmpy]) p.ori += PI;
+        if (tmpx < 0 || tmpx >= grid.size()-1 ||
+            tmpy < 0 || tmpy >= grid[0].size()-1 ||
+            grid[(int)tmpx][(int)tmpy]) p.ori += PI;
+        p.x += cos(p.ori)*vel;
+        p.y += sin(p.ori)*vel;
+    }
+};
 
 struct ParticleFilter{
-    vector<vector<bool>> grid;
+    // vector<vector<bool>> grid;
+    Model model;
     
-    std::vector<State> pop;
+    std::vector<Model::State> pop;
     std::vector<double> weights;
 
     py::array get_pop(){
@@ -91,37 +172,41 @@ struct ParticleFilter{
         return py::cast(ret);
     }
     
-    double _get_meas(double x, double y, double ori){
-        int i = 0;
-        double dx = 1,ret=0;
+    // double _get_meas(double x, double y, double ori){
+    //     int i = 0;
+    //     double dx = 1,ret=0;
 
-        while(dx>1e-3){
-            while(grid
-                [x+(cos(ori)*(dx+ret))]
-                [y+(sin(ori)*(dx+ret))]==false) {
-                    ret+=dx;
-                }
-            dx/=2;
-        }
-        return ret;
-    }
+    //     while(dx>1e-3){
+    //         while(grid
+    //             [x+(cos(ori)*(dx+ret))]
+    //             [y+(sin(ori)*(dx+ret))]==false) {
+    //                 ret+=dx;
+    //             }
+    //         dx/=2;
+    //     }
+    //     return ret;
+    // }
 
     py::array get_weights(){
         // py::print(__func__,"flush"_a=true);
         return py::cast(weights);
     }
 
-    void set_model(double x, double y, double ori, double vel){
-        // py::print(__func__,"flush"_a=true);
-        model.x = x;
-        model.y = y;
-        model.ori = ori;
-        model.vel = vel;
+    // void set_model(double x, double y, double ori, double vel){
+    //     // py::print(__func__,"flush"_a=true);
+    //     model.x = x;
+    //     model.y = y;
+    //     model.ori = ori;
+    //     model.vel = vel;
+    // }
+    void set_model(Model &model_){
+        model=model_;
     }
 
     void update_weights(double meas){
         // py::print(__func__,"flush"_a=true);
         weights.resize(pop.size());
+        auto grid = model.get_grid();
 
         double sum=0;
         for (size_t i = 0;i<pop.size();++i){
@@ -131,7 +216,7 @@ struct ParticleFilter{
                     weights[i]=0;
                     continue;
                 }
-            double m = _get_meas(pop[i].x,pop[i].y,pop[i].ori);
+            double m = model._get_meas(pop[i]);
 
             weights[i] = weights[i]*(1.-(double)fabs(meas-m)/grid.size()/sqrt(2.));
             sum+=weights[i];
@@ -146,12 +231,13 @@ struct ParticleFilter{
         return 1./sum;
     }
 
-    void set_map(Map &mapc){
-        grid = mapc.get_raw();
-    }
+    // void set_map(Map &mapc){
+    //     grid = mapc.get_raw();
+    // }
 
     void setup(size_t N){
         // py::print(__func__,"flush"_a=true);
+        auto grid = model.get_grid();
         std::uniform_real_distribution<double> w(0.0,grid.size()),
                                                 h(0.0,grid[0].size()),
                                                 o(0.0,PI2);
@@ -185,23 +271,31 @@ struct ParticleFilter{
         return py::make_tuple(x,y,atan2(oriy,orix));
     }
     
+    // void diffuse(double sigp, double sigori){
+    //     // py::print(__func__,"flush"_a=true);
+    //     std::normal_distribution<double> dp(0,sigp), dori(0,sigori);
+    //     for(auto &p : pop){
+    //         p.ori += dori(gen);
+    //         p.x += dp(gen);
+    //         p.y += dp(gen);
+    //         if (p.x<0.) p.x=0.;
+    //         if (p.y<0.) p.y=0.;
+    //         if (p.x>=grid.size()) p.x=grid.size()-1;
+    //         if (p.y>=grid[0].size()) p.y=grid[0].size()-1;
+    //     }
+    // }
+
     void diffuse(double sigp, double sigori){
         // py::print(__func__,"flush"_a=true);
-        std::normal_distribution<double> dp(0,sigp), dori(0,sigori);
+        // std::normal_distribution<double> dp(0,sigp), dori(0,sigori);
         for(auto &p : pop){
-            p.ori += dori(gen);
-            p.x += dp(gen);
-            p.y += dp(gen);
-            if (p.x<0.) p.x=0.;
-            if (p.y<0.) p.y=0.;
-            if (p.x>=grid.size()) p.x=grid.size()-1;
-            if (p.y>=grid[0].size()) p.y=grid[0].size()-1;
+            model.evolve(p, sigp, sigori);
         }
     }
     
     void resample(RESAMPLE_TYPE type){
         // py::print(__func__,"flush"_a=true);
-        std::vector<State> new_pop;
+        std::vector<Model::State> new_pop;
         if (type == ROULETTE_WHEEL){
             std::discrete_distribution<int> dist(weights.begin(),weights.end());
             for (size_t i=0;i<pop.size();++i) new_pop.push_back(pop[dist(gen)]);
@@ -225,25 +319,32 @@ struct ParticleFilter{
         for (auto& w: weights) w=1./pop.size();
     }
 
+    // void drift(double dori){
+    //     // py::print(__func__,"flush"_a=true);
+    //     for(auto &p : pop){
+    //         // py::print("elem",p.x,p.y,"flush"_a=true);
+    //         // py::print((int)p.x,(int)p.y);
+    //         // py::print((int)grid[(int)p.x][(int)p.y]);
+    //         if (p.x < 0 || p.x >= grid.size() ||
+    //             p.y < 0 || p.y >= grid[0].size() ||
+    //             grid[(int)p.x][(int)p.y]) continue;
+    //         // py::print("go","flush"_a=true);
+    //         p.ori += dori;
+    //         double tmpx = p.x + cos(p.ori)*model.vel;
+    //         double tmpy = p.y + sin(p.ori)*model.vel;
+    //         // if (grid[(int)tmpx][(int)tmpy]) p.ori += PI;
+    //         if (tmpx < 0 || tmpx >= grid.size()-1 ||
+    //             tmpy < 0 || tmpy >= grid[0].size()-1 ||
+    //             grid[(int)tmpx][(int)tmpy]) p.ori += PI;
+    //         p.x += cos(p.ori)*model.vel;
+    //         p.y += sin(p.ori)*model.vel;
+    //     }
+    // }
+
     void drift(double dori){
         // py::print(__func__,"flush"_a=true);
         for(auto &p : pop){
-            // py::print("elem",p.x,p.y,"flush"_a=true);
-            // py::print((int)p.x,(int)p.y);
-            // py::print((int)grid[(int)p.x][(int)p.y]);
-            if (p.x < 0 || p.x >= grid.size() ||
-                p.y < 0 || p.y >= grid[0].size() ||
-                grid[(int)p.x][(int)p.y]) continue;
-            // py::print("go","flush"_a=true);
-            p.ori += dori;
-            double tmpx = p.x + cos(p.ori)*model.vel;
-            double tmpy = p.y + sin(p.ori)*model.vel;
-            // if (grid[(int)tmpx][(int)tmpy]) p.ori += PI;
-            if (tmpx < 0 || tmpx >= grid.size()-1 ||
-                tmpy < 0 || tmpy >= grid[0].size()-1 ||
-                grid[(int)tmpx][(int)tmpy]) p.ori += PI;
-            p.x += cos(p.ori)*model.vel;
-            p.y += sin(p.ori)*model.vel;
+            model.drift(p, dori);
         }
     }
 };
@@ -259,7 +360,6 @@ PYBIND11_MODULE(PFlib, m){
 
     py::class_<ParticleFilter>(m,"ParticleFilter")
         .def(py::init<>())
-        .def("_get_meas", &ParticleFilter::_get_meas)
         .def("get_effective_N", &ParticleFilter::get_effective_N)
         .def("get_est",&ParticleFilter::get_est)
         .def("setup", &ParticleFilter::setup)
@@ -269,7 +369,7 @@ PYBIND11_MODULE(PFlib, m){
         .def("update_weights", &ParticleFilter::update_weights)
         .def("resample", &ParticleFilter::resample)
         .def("drift", &ParticleFilter::drift)
-        .def("set_map", &ParticleFilter::set_map)
+        // .def("set_map", &ParticleFilter::set_map)
         .def("diffuse", &ParticleFilter::diffuse);
     
     py::class_<Map>(m, "Map")
@@ -278,4 +378,10 @@ PYBIND11_MODULE(PFlib, m){
         .def("add_circle", &Map::add_circle)
         .def("setup", &Map::setup)
         .def("get", &Map::get);
+
+    py::class_<Model>(m, "Model")
+        .def(py::init<double, double, double, double>())
+        .def("set", &Model::set)
+        .def("get_meas", &Model::get_meas)
+        .def("set_map", &Model::set_map);
 }
