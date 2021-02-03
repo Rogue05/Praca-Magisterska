@@ -349,6 +349,96 @@ struct ParticleFilter{
     }
 };
 
+struct FastMap{
+    class CollObj{
+    public:
+        virtual double get_dist(double x, double y, double ori){
+            py::print("Missing get_dist impl");
+            return -1.0;
+        }
+    virtual ~CollObj() = default;
+
+        // virtual double get_dist(double, double, double) = 0;
+    };
+
+    std::vector<std::unique_ptr<CollObj>> objs;
+
+    class Line: public CollObj{
+        double a,b,c;
+    public:
+        // Line() = default;
+        Line(double a_, double b_, double c_): a(a_), b(b_), c(c_) {}; 
+        // Line(const Line &) = default;
+        // virtual ~Line() = default;
+
+        double get_dist(double x, double y, double ori) override{
+            double va=cos(ori), vb=-sin(ori), vc = -(va*y+vb*x);
+            double M = -(a*vb-b*va);
+            // py::print(M,a,vb,b,va);
+            if (M*M<1.e-3) return -1;
+
+            double mx = (-va*c+a*vc)/M-x;
+            double my = (-b*vc+vb*c)/M-y;
+            double m = sqrt(mx*mx + my*my);
+            double ex = m*cos(ori)-mx,
+                   ey = m*sin(ori)-my;
+
+            // // if((ex-x)*(ex-x)<1.0e-5 && (ey-y)*(ey-y)<1.0e-5)
+            //     // return m;
+            // double err = a*ex+b*ey+c;
+            // return m;
+            // py::print(x,ex,y,ey);
+            // py::print(a,b,c);
+            // py::print(err);
+            // return m;
+            if (ex*ex < 1.e-1 && ey*ey < 1.e-1) return m;
+            return -1;
+        }
+    };
+
+    class Circle: public CollObj{
+        double cx,cy,r;
+    public:
+        Circle(double cx_, double cy_, double r_): cx(cx_), cy(cy_), r(r_) {}; 
+
+        double get_dist(double x, double y, double ori) override{
+            double va=cos(ori), vb=-sin(ori), vc = -(va*x+vb*y);
+            double d = abs(vb*cy+va*cx+vc)/sqrt(va*va+vb*vb);
+            if (d>r) return -1;
+            double D = sqrt((cx-x)*(cx-x)+(cy-y)*(cy-y));
+            double dx = sqrt(r*r-d*d);
+            double m = sqrt(D*D-d*d)-dx;
+            
+            double ex = x + m*cos(ori), ey = y + m*sin(ori);
+            double err = (ex-cx)*(ex-cx)+(ey-cy)*(ey-cy)-d*d;
+
+            py::print(x,ex,y,ey);
+            py::print(cx,cy,r);
+            py::print(err);
+            // if(err*err<1.0e-1)
+            //     return m;
+            // return -1;
+            return m;
+        }
+    };
+
+    void add_line(double a, double b, double c){
+        objs.push_back(std::make_unique<Line>(a,b,c));
+    }
+
+    void add_circle(double cx, double cy, double r){
+        objs.push_back(std::make_unique<Circle>(cx,cy,r));
+    }
+
+    double get_meas(double x, double y, double ori){
+        double meas = 1000;
+        for (auto& o:objs){
+            auto m = o->get_dist(x,y,ori);
+            if (m>0 && m<meas) meas = m;
+        }
+        return meas;
+    }
+};
 
 
 PYBIND11_MODULE(PFlib, m){
@@ -378,6 +468,12 @@ PYBIND11_MODULE(PFlib, m){
         .def("add_circle", &Map::add_circle)
         .def("setup", &Map::setup)
         .def("get", &Map::get);
+
+    py::class_<FastMap>(m, "FastMap")
+        .def(py::init<>())
+        .def("add_line", &FastMap::add_line)
+        .def("add_circle", &FastMap::add_circle)
+        .def("get_meas", &FastMap::get_meas);
 
     py::class_<Model>(m, "Model")
         .def(py::init<double, double, double, double>())
