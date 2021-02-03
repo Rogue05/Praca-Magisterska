@@ -402,23 +402,19 @@ struct FastMap{
         Circle(double cx_, double cy_, double r_): cx(cx_), cy(cy_), r(r_) {}; 
 
         double get_dist(double x, double y, double ori) override{
-            double va=cos(ori), vb=-sin(ori), vc = -(va*x+vb*y);
-            double d = abs(vb*cy+va*cx+vc)/sqrt(va*va+vb*vb);
+            double va=cos(ori), vb=-sin(ori), vc = -(va*y+vb*x);
+            double d = abs(va*cy+vb*cx+vc)/sqrt(va*va+vb*vb);
             if (d>r) return -1;
             double D = sqrt((cx-x)*(cx-x)+(cy-y)*(cy-y));
             double dx = sqrt(r*r-d*d);
             double m = sqrt(D*D-d*d)-dx;
-            
-            double ex = x + m*cos(ori), ey = y + m*sin(ori);
-            double err = (ex-cx)*(ex-cx)+(ey-cy)*(ey-cy)-d*d;
 
-            py::print(x,ex,y,ey);
-            py::print(cx,cy,r);
-            py::print(err);
-            // if(err*err<1.0e-1)
-            //     return m;
-            // return -1;
-            return m;
+            double ex = x + m*cos(ori), ey = y + m*sin(ori);
+            double err = (ex-cx)*(ex-cx)+(ey-cy)*(ey-cy)-r*r;
+            
+            if(err*err<1.0e-1)
+                return m;
+            return -1;
         }
     };
 
