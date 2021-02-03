@@ -15,21 +15,32 @@ import numpy as np
 
 map_size = 100
 
-mapa = pf.Map()
-mapa.setup(map_size,map_size,map_size//50)
-mapa.add_circle((map_size/2,3*map_size/4),map_size/10)
-mapa.add_circle((0,0),map_size/4)
+# mapa = pf.Map()
+# mapa.setup(map_size,map_size,map_size//50)
+# mapa.add_circle((map_size/2,3*map_size/4),map_size/10)
+# mapa.add_circle((0,0),map_size/4)
 
-mapa.add_circle((map_size*3/5,0),map_size/8)
-mapa.add_circle((map_size/10,map_size*3/5),map_size/11)
-pos = (2*map_size//3,5*map_size//8)
-size = (map_size//2,map_size//20)
-mapa.add_box(pos,size)
+# mapa.add_circle((map_size*3/5,0),map_size/8)
+# mapa.add_circle((map_size/10,map_size*3/5),map_size/11)
+# pos = (2*map_size//3,5*map_size//8)
+# size = (map_size//2,map_size//20)
+# mapa.add_box(pos,size)
 
-pos = (3*map_size//4,map_size//4)
-size = (map_size//10,map_size//10)
-mapa.add_box(pos,size)
-# pf.tmp_set_map(mapa)
+# pos = (3*map_size//4,map_size//4)
+# size = (map_size//10,map_size//10)
+# mapa.add_box(pos,size)
+# # pf.tmp_set_map(mapa)
+mapa = pf.FastMap()
+
+mapa.add_line(1,0,-100);
+mapa.add_line(0,1,-100);
+mapa.add_line(1,0,0);
+mapa.add_line(0,1,0);
+
+mapa.add_circle(100,100,30);
+mapa.add_circle(20,0,30);
+mapa.add_circle(20,70,10);
+
 
 # ##============================SCAN
 # pos = (map_size/2,)*2
@@ -48,7 +59,7 @@ mapa.add_box(pos,size)
 ##============================SYMULACJA
 fir = pf.ParticleFilter()
 
-grid = np.logical_not(mapa.get().T)
+# grid = np.logical_not(mapa.get().T)
 
 pos = np.array([map_size/2,map_size/2])
 ori = 0
@@ -102,6 +113,7 @@ plt.axis('equal')
 plt.xlim([0,map_size])
 plt.ylim([0,map_size])
 
+grid = np.array(mapa.get_grid()).T
 plt.imshow(grid,cmap='gray')
 points, = plt.plot([],[],'.b',alpha=0.01)
 
@@ -111,12 +123,11 @@ plt.show()
 
 oris = []
 step=np.pi/5/2
-alpha_mask = grid.astype(np.float32)
-for i in range(1000):
+# alpha_mask = grid.astype(np.float32)
+for i in range(100):
 # for i in range(300):
 # def animate(i):
     # global dori,ori
-    print(i,pos,ori,flush=True)
     if not plt.fignum_exists(fig.number):
         break;
 
@@ -125,6 +136,7 @@ for i in range(1000):
 
     model.set(*pos,ori,vel)
     m = model.get_meas()
+    print(i,m,pos,ori,flush=True)
 
     fir.update_weights(m)
 
@@ -143,10 +155,11 @@ for i in range(1000):
     prev = pos.copy()
     # print('DOS',flush=True)
 
-    fir.drift(dori)
+    fir.drift(dori,.01,.03)
     # print('DRIFTED',flush=True)
     ori += dori
-    if grid.T[np.int64(pos[0]+np.cos(ori)*vel)][np.int64(pos[1]+np.sin(ori)*vel)] == False:
+    # if grid.T[np.int64(pos[0]+np.cos(ori)*vel)][np.int64(pos[1]+np.sin(ori)*vel)] == False:
+    if m<vel*2:
         print('Bump')
         # break
         ori+=np.pi
@@ -157,7 +170,7 @@ for i in range(1000):
     # pf.diffuse(1,.01)
     # pf.diffuse(.08,.03) # 100
     # print('TRES',flush=True)
-    fir.diffuse(.9,.03)
+    # fir.diffuse(.9,.03)
     # print('QUATRO',flush=True)
 
     poss.append(prev)
@@ -201,6 +214,9 @@ def init():
 # writergif = PillowWriter(fps=25)
 # anim.save("pf_test.gif",writer=writergif)
 
+
+
+
 plt.figure()
 poss = np.array(poss)
 ests = np.array(ests)
@@ -211,8 +227,8 @@ plt.plot(errs[INIT:])
 plt.legend(['x','y','ori'])
 plt.xlabel('nr. iteracji')
 plt.ylabel('err')
-
 plt.show()
+
 plt.imshow(grid,cmap='gray')
 plt.axis('equal')
 plt.plot(poss[INIT:,0],poss[INIT:,1],label='faktyczne położenie')

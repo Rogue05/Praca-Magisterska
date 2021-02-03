@@ -78,42 +78,181 @@ public:
     
 };
 // "shell_cmd": "D:\\ProgramData\\Anaconda3\\python.exe"
-    
+
+struct FastMap{
+    class CollObj{
+    public:
+        virtual double get_dist(double x, double y, double ori){
+            py::print("Missing get_dist impl");
+            return -1.0;
+        }
+        virtual bool is_valid(double x, double y){
+            py::print("Missing is_valid impl");
+            return false;
+        }
+        virtual ~CollObj() = default;
+
+        // virtual double get_dist(double, double, double) = 0;
+    };
+
+    std::vector<std::unique_ptr<CollObj>> objs;
+    int width,height;
+
+    class Line: public CollObj{
+        double a,b,c;
+    public:
+        // Line() = default;
+        Line(double a_, double b_, double c_): a(a_), b(b_), c(c_) {}; 
+        // Line(const Line &) = default;
+        // virtual ~Line() = default;
+
+        double get_dist(double x, double y, double ori) override{
+            double va=cos(ori), vb=-sin(ori), vc = -(va*y+vb*x);
+            double M = -(a*vb-b*va);
+            // py::print(M,a,vb,b,va);
+            if (M*M<1.e-3) return -1;
+
+            double mx = (-va*c+a*vc)/M-x;
+            double my = (-b*vc+vb*c)/M-y;
+            double m = sqrt(mx*mx + my*my);
+            double ex = m*cos(ori)-mx,
+                   ey = m*sin(ori)-my;
+
+            // // if((ex-x)*(ex-x)<1.0e-5 && (ey-y)*(ey-y)<1.0e-5)
+            //     // return m;
+            // double err = a*ex+b*ey+c;
+            // return m;
+            // py::print(x,ex,y,ey);
+            // py::print(a,b,c);
+            // py::print(err);
+            // return m;
+            if (ex*ex < 1.e-1 && ey*ey < 1.e-1) return m;
+            return -1;
+        }
+        bool is_valid(double x, double y) override{
+            return true;
+        }
+    };
+
+    class Circle: public CollObj{
+        double cx,cy,r;
+    public:
+        Circle(double cx_, double cy_, double r_): cx(cx_), cy(cy_), r(r_) {}; 
+
+        double get_dist(double x, double y, double ori) override{
+            double va=cos(ori), vb=-sin(ori), vc = -(va*y+vb*x);
+            double d = abs(va*cy+vb*cx+vc)/sqrt(va*va+vb*vb);
+            if (d>r) return -1;
+            double D = sqrt((cx-x)*(cx-x)+(cy-y)*(cy-y));
+            double dx = sqrt(r*r-d*d);
+            double m = sqrt(D*D-d*d)-dx;
+
+            double ex = x + m*cos(ori), ey = y + m*sin(ori);
+            double err = (ex-cx)*(ex-cx)+(ey-cy)*(ey-cy)-r*r;
+            
+            if(err*err<1.0e-1)
+                return m;
+            return -1;
+        }
+        bool is_valid(double x, double y){
+            return (cx-x)*(cx-x)+(cy-y)*(cy-y) > r*r;
+        }
+    };
+
+    FastMap(){
+        width = 100;
+        height = 100;
+        add_line(1.,0.,-100.);
+        add_line(0.,1.,-100.);
+        add_line(1.,0.,0.);
+        add_line(0.,1.,0.);
+    }
+
+    vector<vector<bool>> get_grid(){
+        vector<vector<bool>> grid(width);
+        for(auto& i:grid) i.resize(height);
+
+        for(size_t x=0;x<width;++x){
+            for(size_t y=0;y<height;++y){
+                if(is_valid((double)x,
+                            (double)y))
+                    grid[x][y]= true;
+            }
+        }
+        return grid;
+    }
+
+    void add_line(double a, double b, double c){
+        objs.push_back(std::make_unique<Line>(a,b,c));
+    }
+
+    void add_circle(double cx, double cy, double r){
+        objs.push_back(std::make_unique<Circle>(cx,cy,r));
+    }
+
+    double get_meas(double x, double y, double ori){
+        double meas = 1000;
+        for (auto& o:objs){
+            auto m = o->get_dist(x,y,ori);
+            if (m>0 && m<meas) meas = m;
+        }
+        return meas;
+    }
+
+    bool is_valid(double x, double y){
+        bool ret = true;
+        for (auto& o:objs){
+            ret = ret && o->is_valid(x,y);
+            if(!ret) break;
+        }
+        return ret;
+    }
+};
+
+
 struct Model{
     struct State{
         double x,y,ori;
     } real_state;
     double vel;
 
-    vector<vector<bool>> grid;
+    // vector<vector<bool>> grid;
+    FastMap* map;
 
     Model(): real_state({0,0,0}), vel(0){}
     Model(double x_, double y_, double z_, double vel_): real_state({x_, y_, z_}), vel(vel_){}
 
     // double _get_meas(double x, double y, double ori){
-    double _get_meas(const State &st){
-        int i = 0;
-        double dx = 1,ret=0;
+    // double _get_meas(const State &st){
+    //     int i = 0;
+    //     double dx = 1,ret=0;
 
-        while(dx>1e-3){
-            while(grid
-                [st.x+(cos(st.ori)*(dx+ret))]
-                [st.y+(sin(st.ori)*(dx+ret))]==false) {
-                    ret+=dx;
-                }
-            dx/=2;
-        }
-        return ret;
+    //     while(dx>1e-3){
+    //         while(grid
+    //             [st.x+(cos(st.ori)*(dx+ret))]
+    //             [st.y+(sin(st.ori)*(dx+ret))]==false) {
+    //                 ret+=dx;
+    //             }
+    //         dx/=2;
+    //     }
+    //     return ret;
+    // }
+    double _get_meas(const State &st){
+        return map->get_meas(st.x,st.y,st.ori);
     }
 
-    vector<vector<bool>>& get_grid(){return grid;}
+    // vector<vector<bool>>& get_grid(){return grid;}
 
     double get_meas(){
         return _get_meas(real_state);
     }
 
-    void set_map(Map &mapc){
-        grid = mapc.get_raw();
+    // void set_map(Map &mapc){
+    //     grid = mapc.get_raw();
+    // }
+
+    void set_map(FastMap *mapc){
+        map = mapc;
     }
 
     void set(double x, double y, double ori, double vel_){
@@ -124,37 +263,44 @@ struct Model{
         vel = vel_;
     }
 
-    void evolve(State &st, double sigp, double sigori){
-        // py::print(__func__,"flush"_a=true);
-        static std::normal_distribution<double> dp(0,sigp), dori(0,sigori);
-        // for(auto &p : pop){
-        st.ori += dori(gen);
-        st.x += dp(gen);
-        st.y += dp(gen);
-        if (st.x<0.) st.x=0.;
-        if (st.y<0.) st.y=0.;
-        if (st.x>=grid.size()) st.x=grid.size()-1;
-        if (st.y>=grid[0].size()) st.y=grid[0].size()-1;
-        // }
-    }
+    // void evolve(State &st, double sigp, double sigori){
+    //     // py::print(__func__,"flush"_a=true);
+    //     static std::normal_distribution<double> dp(0,sigp), dori(0,sigori);
+    //     // for(auto &p : pop){
+    //     st.ori += dori(gen);
+    //     st.x += dp(gen);
+    //     st.y += dp(gen);
+    //     // if (st.x<0.) st.x=0.;
+    //     // if (st.y<0.) st.y=0.;
+    //     // if (st.x>=grid.size()) st.x=grid.size()-1;
+    //     // if (st.y>=grid[0].size()) st.y=grid[0].size()-1;
+    //     // }
+    // }
 
-    void drift(State &p, double dori){
+    void drift(State &p, double dori, double sigv, double sigori){
         // py::print("elem",p.x,p.y,"flush"_a=true);
         // py::print((int)p.x,(int)p.y);
         // py::print((int)grid[(int)p.x][(int)p.y]);
-        if (p.x < 0 || p.x >= grid.size() ||
-            p.y < 0 || p.y >= grid[0].size() ||
-            grid[(int)p.x][(int)p.y]) return;
+        // if (p.x < 0 || p.x >= grid.size() ||
+        //     p.y < 0 || p.y >= grid[0].size() ||
+        //     grid[(int)p.x][(int)p.y]) return;
         // py::print("go","flush"_a=true);
-        p.ori += dori;
-        double tmpx = p.x + cos(p.ori)*vel;
-        double tmpy = p.y + sin(p.ori)*vel;
+        static std::normal_distribution<double> dvn(0,sigv), dorin(0,sigori);
+        double tvel = vel + dvn(gen);
+        p.ori += dori + dorin(gen);
+        if (map->get_meas(p.x,p.y,p.ori)<tvel) p.ori += PI;
+        // double tmpx = p.x + cos(p.ori)*vel;
+        // double tmpy = p.y + sin(p.ori)*vel;
         // if (grid[(int)tmpx][(int)tmpy]) p.ori += PI;
-        if (tmpx < 0 || tmpx >= grid.size()-1 ||
-            tmpy < 0 || tmpy >= grid[0].size()-1 ||
-            grid[(int)tmpx][(int)tmpy]) p.ori += PI;
-        p.x += cos(p.ori)*vel;
-        p.y += sin(p.ori)*vel;
+        // if (tmpx < 0 || tmpx >= grid.size()-1 ||
+        //     tmpy < 0 || tmpy >= grid[0].size()-1 ||
+        //     grid[(int)tmpx][(int)tmpy]) p.ori += PI;
+        p.x += cos(p.ori)*tvel;
+        p.y += sin(p.ori)*tvel;
+    }
+
+    bool is_valid(const State& st){
+        return map->is_valid(st.x,st.y);
     }
 };
 
@@ -206,19 +352,23 @@ struct ParticleFilter{
     void update_weights(double meas){
         // py::print(__func__,"flush"_a=true);
         weights.resize(pop.size());
-        auto grid = model.get_grid();
+        // auto grid = model.get_grid();
 
         double sum=0;
         for (size_t i = 0;i<pop.size();++i){
-            if (pop[i].x < 0 || pop[i].x > grid.size() ||
-                pop[i].y < 0 || pop[i].y > grid[0].size() ||
-                grid[(int)pop[i].x][(int)pop[i].y]){
-                    weights[i]=0;
-                    continue;
-                }
+            // if (pop[i].x < 0 || pop[i].x > grid.size() ||
+            //     pop[i].y < 0 || pop[i].y > grid[0].size() ||
+            //     grid[(int)pop[i].x][(int)pop[i].y]){
+            //         weights[i]=0;
+            //         continue;
+            //     }
+            if(!model.is_valid(pop[i])){
+                weights[i]=0;
+                continue;
+            }
             double m = model._get_meas(pop[i]);
 
-            weights[i] = weights[i]*(1.-(double)fabs(meas-m)/grid.size()/sqrt(2.));
+            weights[i] = weights[i]*(1.-(double)fabs(meas-m)/100/sqrt(2.));//TODO hack 100 bo taka mapa
             sum+=weights[i];
         }
         for(auto& w : weights) w/=sum;
@@ -237,9 +387,9 @@ struct ParticleFilter{
 
     void setup(size_t N){
         // py::print(__func__,"flush"_a=true);
-        auto grid = model.get_grid();
-        std::uniform_real_distribution<double> w(0.0,grid.size()),
-                                                h(0.0,grid[0].size()),
+        // auto grid = model.get_grid();
+        std::uniform_real_distribution<double> w(0.0,100), // TODO 100 bo hack
+                                                h(0.0,100),
                                                 o(0.0,PI2);
         py::print("clearing pop");
         pop.resize(0);
@@ -285,13 +435,13 @@ struct ParticleFilter{
     //     }
     // }
 
-    void diffuse(double sigp, double sigori){
-        // py::print(__func__,"flush"_a=true);
-        // std::normal_distribution<double> dp(0,sigp), dori(0,sigori);
-        for(auto &p : pop){
-            model.evolve(p, sigp, sigori);
-        }
-    }
+    // void diffuse(double sigp, double sigori){
+    //     // py::print(__func__,"flush"_a=true);
+    //     // std::normal_distribution<double> dp(0,sigp), dori(0,sigori);
+    //     for(auto &p : pop){
+    //         model.evolve(p, sigp, sigori);
+    //     }
+    // }
     
     void resample(RESAMPLE_TYPE type){
         // py::print(__func__,"flush"_a=true);
@@ -341,98 +491,11 @@ struct ParticleFilter{
     //     }
     // }
 
-    void drift(double dori){
+    void drift(double dori, double sigv, double sigori){
         // py::print(__func__,"flush"_a=true);
         for(auto &p : pop){
-            model.drift(p, dori);
+            model.drift(p, dori, sigv, sigori);
         }
-    }
-};
-
-struct FastMap{
-    class CollObj{
-    public:
-        virtual double get_dist(double x, double y, double ori){
-            py::print("Missing get_dist impl");
-            return -1.0;
-        }
-    virtual ~CollObj() = default;
-
-        // virtual double get_dist(double, double, double) = 0;
-    };
-
-    std::vector<std::unique_ptr<CollObj>> objs;
-
-    class Line: public CollObj{
-        double a,b,c;
-    public:
-        // Line() = default;
-        Line(double a_, double b_, double c_): a(a_), b(b_), c(c_) {}; 
-        // Line(const Line &) = default;
-        // virtual ~Line() = default;
-
-        double get_dist(double x, double y, double ori) override{
-            double va=cos(ori), vb=-sin(ori), vc = -(va*y+vb*x);
-            double M = -(a*vb-b*va);
-            // py::print(M,a,vb,b,va);
-            if (M*M<1.e-3) return -1;
-
-            double mx = (-va*c+a*vc)/M-x;
-            double my = (-b*vc+vb*c)/M-y;
-            double m = sqrt(mx*mx + my*my);
-            double ex = m*cos(ori)-mx,
-                   ey = m*sin(ori)-my;
-
-            // // if((ex-x)*(ex-x)<1.0e-5 && (ey-y)*(ey-y)<1.0e-5)
-            //     // return m;
-            // double err = a*ex+b*ey+c;
-            // return m;
-            // py::print(x,ex,y,ey);
-            // py::print(a,b,c);
-            // py::print(err);
-            // return m;
-            if (ex*ex < 1.e-1 && ey*ey < 1.e-1) return m;
-            return -1;
-        }
-    };
-
-    class Circle: public CollObj{
-        double cx,cy,r;
-    public:
-        Circle(double cx_, double cy_, double r_): cx(cx_), cy(cy_), r(r_) {}; 
-
-        double get_dist(double x, double y, double ori) override{
-            double va=cos(ori), vb=-sin(ori), vc = -(va*y+vb*x);
-            double d = abs(va*cy+vb*cx+vc)/sqrt(va*va+vb*vb);
-            if (d>r) return -1;
-            double D = sqrt((cx-x)*(cx-x)+(cy-y)*(cy-y));
-            double dx = sqrt(r*r-d*d);
-            double m = sqrt(D*D-d*d)-dx;
-
-            double ex = x + m*cos(ori), ey = y + m*sin(ori);
-            double err = (ex-cx)*(ex-cx)+(ey-cy)*(ey-cy)-r*r;
-            
-            if(err*err<1.0e-1)
-                return m;
-            return -1;
-        }
-    };
-
-    void add_line(double a, double b, double c){
-        objs.push_back(std::make_unique<Line>(a,b,c));
-    }
-
-    void add_circle(double cx, double cy, double r){
-        objs.push_back(std::make_unique<Circle>(cx,cy,r));
-    }
-
-    double get_meas(double x, double y, double ori){
-        double meas = 1000;
-        for (auto& o:objs){
-            auto m = o->get_dist(x,y,ori);
-            if (m>0 && m<meas) meas = m;
-        }
-        return meas;
     }
 };
 
@@ -454,9 +517,9 @@ PYBIND11_MODULE(PFlib, m){
         .def("set_model", &ParticleFilter::set_model)
         .def("update_weights", &ParticleFilter::update_weights)
         .def("resample", &ParticleFilter::resample)
-        .def("drift", &ParticleFilter::drift)
+        .def("drift", &ParticleFilter::drift);
         // .def("set_map", &ParticleFilter::set_map)
-        .def("diffuse", &ParticleFilter::diffuse);
+        // .def("diffuse", &ParticleFilter::diffuse);
     
     py::class_<Map>(m, "Map")
         .def(py::init<>())
@@ -467,6 +530,7 @@ PYBIND11_MODULE(PFlib, m){
 
     py::class_<FastMap>(m, "FastMap")
         .def(py::init<>())
+        .def("get_grid", &FastMap::get_grid)
         .def("add_line", &FastMap::add_line)
         .def("add_circle", &FastMap::add_circle)
         .def("get_meas", &FastMap::get_meas);
