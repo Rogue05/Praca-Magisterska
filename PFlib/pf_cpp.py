@@ -15,21 +15,6 @@ import numpy as np
 
 map_size = 100
 
-# mapa = pf.Map()
-# mapa.setup(map_size,map_size,map_size//50)
-# mapa.add_circle((map_size/2,3*map_size/4),map_size/10)
-# mapa.add_circle((0,0),map_size/4)
-
-# mapa.add_circle((map_size*3/5,0),map_size/8)
-# mapa.add_circle((map_size/10,map_size*3/5),map_size/11)
-# pos = (2*map_size//3,5*map_size//8)
-# size = (map_size//2,map_size//20)
-# mapa.add_box(pos,size)
-
-# pos = (3*map_size//4,map_size//4)
-# size = (map_size//10,map_size//10)
-# mapa.add_box(pos,size)
-# # pf.tmp_set_map(mapa)
 mapa = pf.FastMap()
 
 mapa.add_line(1,0,-100);
@@ -141,7 +126,7 @@ for i in range(100):
     fir.update_weights(m)
 
     # print('UNO',flush=True)
-    print_err()
+    # print_err() #===========================
     # print('EFF',flush=True)
 
     Neff = fir.get_effective_N()
@@ -167,40 +152,40 @@ for i in range(100):
     pos[1] = pos[1]+np.sin(ori)*vel
 
 
-    # pf.diffuse(1,.01)
-    # pf.diffuse(.08,.03) # 100
-    # print('TRES',flush=True)
-    # fir.diffuse(.9,.03)
-    # print('QUATRO',flush=True)
+    # # pf.diffuse(1,.01)
+    # # pf.diffuse(.08,.03) # 100
+    # # print('TRES',flush=True)
+    # # fir.diffuse(.9,.03)
+    # # print('QUATRO',flush=True)
 
-    poss.append(prev)
-    ests.append(pest[:2])
+    # poss.append(prev)
+    # # ests.append(pest[:2])
 
 
-    pop = fir.get_pop()
-    points.set_data(pop[:,0],pop[:,1])
-    posline.set_data(*prev)
-    estline.set_data(*pest[:2])
-
-    # return points,posline,estline
-
-    fig.canvas.draw()
-    fig.canvas.flush_events()
-
-    # # if True:
-    # # # if i%10==9:
     # pop = fir.get_pop()
-    # plt.axis('equal')
-    # # plt.title(str(i)+' '+str(errs[-1]))
-    # plt.imshow(grid,cmap='gray')
-    # plt.scatter(pop[:,0],pop[:,1],s=1,alpha=1000/pop_size)
-    # plt.imshow(grid,cmap='gray')
-    # plt.plot(*prev,'.r')
-    # plt.plot(*pest[:2],'.k')
+    # points.set_data(pop[:,0],pop[:,1])
+    # posline.set_data(*prev)
+    # # estline.set_data(*pest[:2])
 
-    # plt.xlim([0,map_size])
-    # plt.ylim([0,map_size])
-    # plt.show()
+    # # return points,posline,estline
+
+    # fig.canvas.draw()
+    # fig.canvas.flush_events()
+
+    # # # if True:
+    # # # # if i%10==9:
+    # # pop = fir.get_pop()
+    # # plt.axis('equal')
+    # # # plt.title(str(i)+' '+str(errs[-1]))
+    # # plt.imshow(grid,cmap='gray')
+    # # plt.scatter(pop[:,0],pop[:,1],s=1,alpha=1000/pop_size)
+    # # plt.imshow(grid,cmap='gray')
+    # # plt.plot(*prev,'.r')
+    # # plt.plot(*pest[:2],'.k')
+
+    # # plt.xlim([0,map_size])
+    # # plt.ylim([0,map_size])
+    # # plt.show()
 
 def init():
     points.set_data([],[])
