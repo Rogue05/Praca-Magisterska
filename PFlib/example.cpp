@@ -17,11 +17,6 @@ std::default_random_engine gen;
 const double PI  = 3.141592653589793238463;
 const double PI2  = 2*PI;
 
-enum RESAMPLE_TYPE{
-    ROULETTE_WHEEL,
-    SUS
-};
-
 struct FastMap{
     class CollObj{
     public:
@@ -63,7 +58,8 @@ struct FastMap{
             return -1;
         }
         bool is_valid(double x, double y) override{
-            return true;
+            // return true;
+            return a*y+b*x+c > 0;
         }
     };
 
@@ -92,11 +88,11 @@ struct FastMap{
         }
     };
 
-    FastMap(){
-        width = 100;
-        height = 100;
-        add_line(1.,0.,-100.);
-        add_line(0.,1.,-100.);
+    FastMap(double bound){
+        width = bound;
+        height = bound;
+        add_line(-1.,0.,bound);
+        add_line(0.,-1.,bound);
         add_line(1.,0.,0.);
         add_line(0.,1.,0.);
     }
@@ -140,13 +136,26 @@ struct FastMap{
         }
         return ret;
     }
-};
 
+    void set_random_pos(double &x, double &y){
+        static std::uniform_real_distribution<double> w(0.0,(double)width), // TODO 100 bo hack
+                                                h(0.0,(double)height);
+        do{
+            x = w(gen);
+            y = h(gen);
+        }while(!is_valid(x,y));
+    }
+};
 
 struct Model{
     struct State{
         double x,y,ori;
     } real_state;
+
+    struct Measurment{
+        double dist;
+    };
+
     double vel;
 
     FastMap* map;
@@ -154,12 +163,27 @@ struct Model{
     Model(): real_state({0,0,0}), vel(0){}
     Model(double x_, double y_, double z_, double vel_): real_state({x_, y_, z_}), vel(vel_){}
 
-    double _get_meas(const State &st){
-        return map->get_meas(st.x,st.y,st.ori);
+    Measurment _get_meas(const State &st){
+        Measurment ret;
+        ret.dist = map->get_meas(st.x,st.y,st.ori);
+        return ret;
     }
 
-    double get_meas(){
+    State get_random_state(){
+        static std::uniform_real_distribution<double> o(0.0,PI2);
+        State st;
+        map->set_random_pos(st.x,st.y);
+        st.ori = o(gen);
+        return st;
+    }
+
+    Measurment get_meas(){
         return _get_meas(real_state);
+    }
+
+    double get_meas_prob(const State &st, const Measurment &meas){
+        double m = _get_meas(st).dist;
+        return (1.-(double)fabs(meas.dist-m)/1000/sqrt(2.));//TODO hack 1000 bo taka mapa
     }
 
     void set_map(FastMap *mapc){
@@ -172,6 +196,16 @@ struct Model{
         real_state.y = y;
         real_state.ori = ori;
         vel = vel_;
+    }
+
+    py::array get(){
+        // py::print(__func__,"flush"_a=true);
+        std::vector<double> ret{real_state.x,real_state.y,real_state.ori,vel};
+        return py::cast(ret);
+    }
+
+    void update(double dori, double dvel){
+        drift(real_state,dori,.0,.0);
     }
 
     void drift(State &p, double dori, double sigv, double sigori){
@@ -188,8 +222,14 @@ struct Model{
     }
 };
 
+
+enum RESAMPLE_TYPE{
+    ROULETTE_WHEEL,
+    SUS
+};
+
 struct ParticleFilter{
-    Model model;
+    Model* model;
     
     std::vector<Model::State> pop;
     std::vector<double> weights;
@@ -208,22 +248,23 @@ struct ParticleFilter{
     }
 
     void set_model(Model &model_){
-        model=model_;
+        model=&model_;
     }
 
-    void update_weights(double meas){
+    void update_weights(Model::Measurment meas){
         // py::print(__func__,"flush"_a=true);
         weights.resize(pop.size());
 
         double sum=0;
         for (size_t i = 0;i<pop.size();++i){
-            if(!model.is_valid(pop[i])){
+            if(!model->is_valid(pop[i])){
                 weights[i]=0;
                 continue;
             }
-            double m = model._get_meas(pop[i]);
-
-            weights[i] = weights[i]*(1.-(double)fabs(meas-m)/100/sqrt(2.));//TODO hack 100 bo taka mapa
+            // double m = model._get_meas(pop[i]).dist;
+            // m = model._get_meas(pop[i]).dist;
+            // weights[i] = weights[i]*(1.-(double)fabs(meas-m)/1000/sqrt(2.));//TODO hack 100 bo taka mapa
+            weights[i] = weights[i]*model->get_meas_prob(pop[i],meas);
             sum+=weights[i];
         }
         for(auto& w : weights) w/=sum;
@@ -237,15 +278,16 @@ struct ParticleFilter{
     }
 
     void setup(size_t N){
-        std::uniform_real_distribution<double> w(0.0,100), // TODO 100 bo hack
-                                                h(0.0,100),
-                                                o(0.0,PI2);
         py::print("clearing pop");
         pop.resize(0);
         for (size_t i=0;i<N;++i){
-            pop.push_back({w(gen),h(gen),o(gen)});
+            // Model::State st{w(gen),h(gen),o(gen)};
+            // if(model.is_valid(st))
+                // pop.push_back(st);
+            pop.push_back(model->get_random_state());
+            // else N++;
         }
-        py::print("initialized pop");
+        py::print("initialized pop",N);
         
         weights.resize(pop.size());
         for (auto & w : weights) w = 1./N;
@@ -299,7 +341,7 @@ struct ParticleFilter{
     void drift(double dori, double sigv, double sigori){
         // py::print(__func__,"flush"_a=true);
         for(auto &p : pop){
-            model.drift(p, dori, sigv, sigori);
+            model->drift(p, dori, sigv, sigori);
         }
     }
 };
@@ -325,7 +367,7 @@ PYBIND11_MODULE(PFlib, m){
         .def("drift", &ParticleFilter::drift);
 
     py::class_<FastMap>(m, "FastMap")
-        .def(py::init<>())
+        .def(py::init<double>())
         .def("get_grid", &FastMap::get_grid)
         .def("add_line", &FastMap::add_line)
         .def("add_circle", &FastMap::add_circle)
@@ -334,6 +376,10 @@ PYBIND11_MODULE(PFlib, m){
     py::class_<Model>(m, "Model")
         .def(py::init<double, double, double, double>())
         .def("set", &Model::set)
+        .def("get", &Model::get)
         .def("get_meas", &Model::get_meas)
-        .def("set_map", &Model::set_map);
+        .def("set_map", &Model::set_map)
+        .def("update", &Model::update);
+
+    py::class_<Model::Measurment>(m, "Measurment");
 }
