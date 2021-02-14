@@ -8,152 +8,28 @@
 
 #include <iostream>
 
+#include "Map.hpp"
+
 using namespace std;
 namespace py = pybind11;
 using namespace pybind11::literals;
 
-std::default_random_engine gen;
-
-const double PI  = 3.141592653589793238463;
-const double PI2  = 2*PI;
-
-struct FastMap{
-    class CollObj{
-    public:
-        virtual double get_dist(double x, double y, double ori){
-            py::print("Missing get_dist impl");
-            return -1.0;
-        }
-        virtual bool is_valid(double x, double y){
-            py::print("Missing is_valid impl");
-            return false;
-        }
-        virtual ~CollObj() = default;
-    };
-
-    std::vector<std::unique_ptr<CollObj>> objs;
-    int width,height;
-
-    class Line: public CollObj{
-        double a,b,c;
-    public:
-        // Line() = default;
-        Line(double a_, double b_, double c_): a(a_), b(b_), c(c_) {}; 
-        // Line(const Line &) = default;
-        // virtual ~Line() = default;
-
-        double get_dist(double x, double y, double ori) override{
-            double va=cos(ori), vb=-sin(ori), vc = -(va*y+vb*x);
-            double M = -(a*vb-b*va);
-            // py::print(M,a,vb,b,va);
-            if (M*M<1.e-3) return -1;
-
-            double mx = (-va*c+a*vc)/M-x;
-            double my = (-b*vc+vb*c)/M-y;
-            double m = sqrt(mx*mx + my*my);
-            double ex = m*cos(ori)-mx,
-                   ey = m*sin(ori)-my;
-
-            if (ex*ex < 1.e-1 && ey*ey < 1.e-1) return m;
-            return -1;
-        }
-        bool is_valid(double x, double y) override{
-            // return true;
-            return a*y+b*x+c > 0;
-        }
-    };
-
-    class Circle: public CollObj{
-        double cx,cy,r;
-    public:
-        Circle(double cx_, double cy_, double r_): cx(cx_), cy(cy_), r(r_) {}; 
-
-        double get_dist(double x, double y, double ori) override{
-            double va=cos(ori), vb=-sin(ori), vc = -(va*y+vb*x);
-            double d = abs(va*cy+vb*cx+vc)/sqrt(va*va+vb*vb);
-            if (d>r) return -1;
-            double D = sqrt((cx-x)*(cx-x)+(cy-y)*(cy-y));
-            double dx = sqrt(r*r-d*d);
-            double m = sqrt(D*D-d*d)-dx;
-
-            double ex = x + m*cos(ori), ey = y + m*sin(ori);
-            double err = (ex-cx)*(ex-cx)+(ey-cy)*(ey-cy)-r*r;
-            
-            if(err*err<1.0e-1)
-                return m;
-            return -1;
-        }
-        bool is_valid(double x, double y){
-            return (cx-x)*(cx-x)+(cy-y)*(cy-y) > r*r;
-        }
-    };
-
-    FastMap(double bound){
-        width = bound;
-        height = bound;
-        add_line(-1.,0.,bound);
-        add_line(0.,-1.,bound);
-        add_line(1.,0.,0.);
-        add_line(0.,1.,0.);
-    }
-
-    vector<vector<bool>> get_grid(){
-        vector<vector<bool>> grid(width);
-        for(auto& i:grid) i.resize(height);
-
-        for(size_t x=0;x<width;++x){
-            for(size_t y=0;y<height;++y){
-                if(is_valid((double)x,
-                            (double)y))
-                    grid[x][y]= true;
-            }
-        }
-        return grid;
-    }
-
-    void add_line(double a, double b, double c){
-        objs.push_back(std::make_unique<Line>(a,b,c));
-    }
-
-    void add_circle(double cx, double cy, double r){
-        objs.push_back(std::make_unique<Circle>(cx,cy,r));
-    }
-
-    double get_meas(double x, double y, double ori){
-        double meas = 1000;
-        for (auto& o:objs){
-            auto m = o->get_dist(x,y,ori);
-            if (m>0 && m<meas) meas = m;
-        }
-        return meas;
-    }
-
-    bool is_valid(double x, double y){
-        bool ret = true;
-        for (auto& o:objs){
-            ret = ret && o->is_valid(x,y);
-            if(!ret) break;
-        }
-        return ret;
-    }
-
-    void set_random_pos(double &x, double &y){
-        static std::uniform_real_distribution<double> w(0.0,(double)width), // TODO 100 bo hack
-                                                h(0.0,(double)height);
-        do{
-            x = w(gen);
-            y = h(gen);
-        }while(!is_valid(x,y));
-    }
-};
-
 struct Model{
+    std::default_random_engine gen;
+
     struct State{
         double x,y,ori;
     } real_state;
 
     struct Measurment{
         double dist;
+        
+        std::default_random_engine gen;
+        void randomize(double var){
+            // std::uniform_real_distribution<double> dx(0.,var);
+            static std::normal_distribution<double> dx(1.,var);
+            dist *= dx(gen);
+        }
     };
 
     double vel;
@@ -229,6 +105,8 @@ enum RESAMPLE_TYPE{
 };
 
 struct ParticleFilter{
+    std::default_random_engine gen;
+
     Model* model;
     
     std::vector<Model::State> pop;
@@ -261,9 +139,6 @@ struct ParticleFilter{
                 weights[i]=0;
                 continue;
             }
-            // double m = model._get_meas(pop[i]).dist;
-            // m = model._get_meas(pop[i]).dist;
-            // weights[i] = weights[i]*(1.-(double)fabs(meas-m)/1000/sqrt(2.));//TODO hack 100 bo taka mapa
             weights[i] = weights[i]*model->get_meas_prob(pop[i],meas);
             sum+=weights[i];
         }
@@ -281,11 +156,7 @@ struct ParticleFilter{
         py::print("clearing pop");
         pop.resize(0);
         for (size_t i=0;i<N;++i){
-            // Model::State st{w(gen),h(gen),o(gen)};
-            // if(model.is_valid(st))
-                // pop.push_back(st);
             pop.push_back(model->get_random_state());
-            // else N++;
         }
         py::print("initialized pop",N);
         
@@ -381,5 +252,6 @@ PYBIND11_MODULE(PFlib, m){
         .def("set_map", &Model::set_map)
         .def("update", &Model::update);
 
-    py::class_<Model::Measurment>(m, "Measurment");
+    py::class_<Model::Measurment>(m, "Model.Measurment")
+        .def("randomize",&Model::Measurment::randomize);
 }

@@ -18,7 +18,7 @@ map_size = 1000
 mapa = pf.FastMap(map_size)
 
 mapa.add_line(-1,1,800)
-
+mapa.add_line(1,-1,700)
 mapa.add_circle(1000,1000,300)
 mapa.add_circle(200,0,300)
 mapa.add_circle(200,700,100)
@@ -31,7 +31,6 @@ ori = 0
 vel = 10
 model = pf.Model(*pos,ori,vel)
 
-# dori = np.pi/70
 dori = -np.pi/30
 
 pop_size = 10000
@@ -86,11 +85,6 @@ plt.show()
 
 oris = []
 step=np.pi/5/2
-# alpha_mask = grid.astype(np.float32)
-# for i in range(100):
-# for i in range(300):
-# def animate(i):
-    # global dori,ori
 
 # @profile
 def iter(i):
@@ -100,49 +94,27 @@ def iter(i):
         return False
 
     dori = np.random.uniform(-step,step)
-    # dori = -np.pi/30
 
-    # model.set(*pos,ori,vel)
     m = model.get_meas()
+    m.randomize(.05)
     print(i,m,pos,ori,flush=True)
 
     fir.update_weights(m)
 
-    # print('UNO',flush=True)
-    print_err() #===========================
-    # print('EFF',flush=True)
+    print_err()
 
     Neff = fir.get_effective_N()
-    # print('ERR',flush=True)
-    # if Neff < pop_size*0.8:
-    #     print('resample',Neff,flush=True)
-    #     fir.resample(pf.RESAMPLE_TYPE.SUS)
-    fir.resample(pf.RESAMPLE_TYPE.SUS)
+    if Neff < pop_size*0.8:
+        print('resample',Neff,flush=True)
+        fir.resample(pf.RESAMPLE_TYPE.SUS)
+    # fir.resample(pf.RESAMPLE_TYPE.SUS)
     # fir.resample(pf.RESAMPLE_TYPE.ROULETTE_WHEEL)
 
-    # print('COPYING',flush=True)
     prev = pos.copy()
-    # print('DOS',flush=True)
-
+    
     fir.drift(dori,.01,.03)
     model.update(dori,0)
     pos[0], pos[1], ori, tmp = model.get()
-    # # print('DRIFTED',flush=True)
-    # ori += dori
-    # # if grid.T[np.int64(pos[0]+np.cos(ori)*vel)][np.int64(pos[1]+np.sin(ori)*vel)] == False:
-    # if m<vel*2:
-    #     print('Bump')
-    #     # break
-    #     ori+=np.pi
-    # pos[0] = pos[0]+np.cos(ori)*vel
-    # pos[1] = pos[1]+np.sin(ori)*vel
-
-
-    # pf.diffuse(1,.01)
-    # pf.diffuse(.08,.03) # 100
-    # print('TRES',flush=True)
-    # fir.diffuse(.9,.03)
-    # print('QUATRO',flush=True)
 
     poss.append(prev)
     ests.append(pest[:2])
@@ -157,21 +129,6 @@ def iter(i):
 
     fig.canvas.draw()
     fig.canvas.flush_events()
-
-    # # if True:
-    # # # if i%10==9:
-    # pop = fir.get_pop()
-    # plt.axis('equal')
-    # # plt.title(str(i)+' '+str(errs[-1]))
-    # plt.imshow(grid,cmap='gray')
-    # plt.scatter(pop[:,0],pop[:,1],s=1,alpha=1000/pop_size)
-    # plt.imshow(grid,cmap='gray')
-    # plt.plot(*prev,'.r')
-    # plt.plot(*pest[:2],'.k')
-
-    # plt.xlim([0,map_size])
-    # plt.ylim([0,map_size])
-    # plt.show()
     return True
 
 def init():
