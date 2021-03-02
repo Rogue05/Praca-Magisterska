@@ -29,7 +29,7 @@ fir = pf.ParticleFilter()
 pos = np.array([map_size/2,map_size/2])
 ori = 0
 vel = 10
-model = pf.Model(*pos,ori,vel)
+model = pf.Model(*pos,ori,vel,.01,.03)
 
 dori = -np.pi/30
 
@@ -112,7 +112,7 @@ def iter(i):
 
     prev = pos.copy()
     
-    fir.drift(dori,.01,.03)
+    fir.drift(dori)
     model.update(dori,0)
     pos[0], pos[1], ori, tmp = model.get()
 

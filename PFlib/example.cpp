@@ -4,99 +4,16 @@
 
 #include <random>
 #include <vector>
-#include <cmath>
+// #include <cmath>
 
 #include <iostream>
 
 #include "Map.hpp"
+#include "Model.hpp"
 
 using namespace std;
 namespace py = pybind11;
 using namespace pybind11::literals;
-
-struct Model{
-    std::default_random_engine gen;
-
-    struct State{
-        double x,y,ori;
-    } real_state;
-
-    struct Measurment{
-        double dist;
-        
-        std::default_random_engine gen;
-        void randomize(double var){
-            // std::uniform_real_distribution<double> dx(0.,var);
-            static std::normal_distribution<double> dx(1.,var);
-            dist *= dx(gen);
-        }
-    };
-
-    double vel;
-
-    FastMap* map;
-
-    Model(): real_state({0,0,0}), vel(0){}
-    Model(double x_, double y_, double z_, double vel_): real_state({x_, y_, z_}), vel(vel_){}
-
-    Measurment _get_meas(const State &st){
-        Measurment ret;
-        ret.dist = map->get_meas(st.x,st.y,st.ori);
-        return ret;
-    }
-
-    State get_random_state(){
-        static std::uniform_real_distribution<double> o(0.0,PI2);
-        State st;
-        map->set_random_pos(st.x,st.y);
-        st.ori = o(gen);
-        return st;
-    }
-
-    Measurment get_meas(){
-        return _get_meas(real_state);
-    }
-
-    double get_meas_prob(const State &st, const Measurment &meas){
-        double m = _get_meas(st).dist;
-        return (1.-(double)fabs(meas.dist-m)/1000/sqrt(2.));//TODO hack 1000 bo taka mapa
-    }
-
-    void set_map(FastMap *mapc){
-        map = mapc;
-    }
-
-    void set(double x, double y, double ori, double vel_){
-        // py::print(__func__,"flush"_a=true);
-        real_state.x = x;
-        real_state.y = y;
-        real_state.ori = ori;
-        vel = vel_;
-    }
-
-    py::array get(){
-        // py::print(__func__,"flush"_a=true);
-        std::vector<double> ret{real_state.x,real_state.y,real_state.ori,vel};
-        return py::cast(ret);
-    }
-
-    void update(double dori, double dvel){
-        drift(real_state,dori,.0,.0);
-    }
-
-    void drift(State &p, double dori, double sigv, double sigori){
-        static std::normal_distribution<double> dvn(0,sigv), dorin(0,sigori);
-        double tvel = vel + dvn(gen);
-        p.ori += dori + dorin(gen);
-        if (map->get_meas(p.x,p.y,p.ori)<tvel) p.ori += PI;
-        p.x += cos(p.ori)*tvel;
-        p.y += sin(p.ori)*tvel;
-    }
-
-    bool is_valid(const State& st){
-        return map->is_valid(st.x,st.y);
-    }
-};
 
 
 enum RESAMPLE_TYPE{
@@ -209,10 +126,11 @@ struct ParticleFilter{
         for (auto& w: weights) w=1./pop.size();
     }
 
-    void drift(double dori, double sigv, double sigori){
+    // void drift(double dori, double sigv, double sigori){
+    void drift(double dori){
         // py::print(__func__,"flush"_a=true);
         for(auto &p : pop){
-            model->drift(p, dori, sigv, sigori);
+            model->drift(p, dori);
         }
     }
 };
@@ -245,7 +163,7 @@ PYBIND11_MODULE(PFlib, m){
         .def("get_meas", &FastMap::get_meas);
 
     py::class_<Model>(m, "Model")
-        .def(py::init<double, double, double, double>())
+        .def(py::init<double, double, double, double, double, double>())
         .def("set", &Model::set)
         .def("get", &Model::get)
         .def("get_meas", &Model::get_meas)
