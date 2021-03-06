@@ -33,7 +33,7 @@ model = pf.Model(*pos,ori,vel,30, .1,.03)
 
 dori = -np.pi/30
 
-pop_size = 10000
+pop_size = 1000
 model.set_map(mapa)
 fir.set_model(model)
 fir.setup(pop_size)
@@ -150,12 +150,12 @@ def iter(i):
     posline.set_data(*prev)
     estline.set_data(*pest[:2])
 
-    if i%10:
-        return points,posline,estline
-    #     return True
+    # if i%10:
+    #     return points,posline,estline
+    # #     return True
     fig.canvas.draw()
     fig.canvas.flush_events()
-    return points,posline,estline
+    # return points,posline,estline
     return True
 
 def init():
@@ -164,20 +164,20 @@ def init():
     estline.set_data([],[])
     return points,posline,estline
 
-# for i in range(1000):
-#     if not iter(i):
-#         break
-#     # if i == 10:
-#     #     import time
-#     #     time.sleep(5)
-#     #     break
+for i in range(1000):
+    if not iter(i):
+        break
+    # if i == 10:
+    #     import time
+    #     time.sleep(5)
+    #     break
 
-anim = FuncAnimation(fig, iter, init_func=init,
-                      frames=200, interval=40)
-                      # frames=1000, interval=40)
-# anim.save('pf_test.gif')
-writergif = PillowWriter(fps=25)
-anim.save("pf_test.gif",writer=writergif)
+# anim = FuncAnimation(fig, iter, init_func=init,
+#                       # frames=200, interval=40)
+#                       frames=1000, interval=40)
+# # anim.save('pf_test.gif')
+# writergif = PillowWriter(fps=25)
+# anim.save("pf_test.gif",writer=writergif)
 
 
 

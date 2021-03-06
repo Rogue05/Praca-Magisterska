@@ -2,12 +2,23 @@
 #include <random>
 
 #include <pybind11/pybind11.h> // print
+#include <pybind11/numpy.h>
 
 namespace py = pybind11;
 
 const double PI  = 3.141592653589793238463;
 const double PI2  = 2*PI;
 
+struct Map{
+    // virtual double get_meas(st.x,st.y,st.ori);
+    // virtual void set_random_pos(st.x,st.y);
+    // virtual bool is_valid(st.x,st.y);
+    virtual double get_meas(double, double, double);
+    virtual void set_random_pos(double&, double&);
+    virtual bool is_valid(double, double);
+};
+
+// struct FastMap : public Map{
 struct FastMap{
     std::default_random_engine gen;
 
@@ -108,6 +119,7 @@ struct FastMap{
         objs.push_back(std::make_unique<Circle>(cx,cy,r));
     }
 
+    // double get_meas(double x, double y, double ori) override{
     double get_meas(double x, double y, double ori){
         double meas = 1000;
         for (auto& o:objs){
@@ -117,6 +129,7 @@ struct FastMap{
         return meas;
     }
 
+    // bool is_valid(double x, double y) override{
     bool is_valid(double x, double y){
         bool ret = true;
         for (auto& o:objs){
@@ -126,6 +139,7 @@ struct FastMap{
         return ret;
     }
 
+    // void set_random_pos(double &x, double &y) override{
     void set_random_pos(double &x, double &y){
         static std::uniform_real_distribution<double> w(0.0,(double)width), // TODO 100 bo hack
                                                 h(0.0,(double)height);
@@ -135,3 +149,29 @@ struct FastMap{
         }while(!is_valid(x,y));
     }
 };
+
+// struct HeightMap : public Map{
+//     std::vector<std::vector<double>> grid;
+//     HeightMap(py::array_t<double> grid_){
+//         auto r = grid_.unchecked<2>();
+//         grid.resize(r.shape(0));
+//         for (auto& g:grid)
+//             g.resize(r.shape(1));
+//         for (py::ssize_t x = 0; x < r.shape(0); ++x)
+//             for (py::ssize_t y = 0; y < r.shape(1); ++y)
+//                 grid[x][y] = r(x,y);
+//         // py::print(r.shape(0),r.shape(1),r.shape(0)*r.shape(1));
+//     }
+
+//     double get_meas(double x, double y, double ori) override{
+//         return 2.;
+//     }
+
+//     void set_random_pos(double& x, double& y) override{
+//         return;
+//     }
+
+//     bool is_valid(double x, double y) override{
+//         return true;
+//     }
+// };

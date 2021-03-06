@@ -82,34 +82,16 @@ struct ParticleFilter{
         py::print("initialized weights");
     }
 
-    Model::State _get_est(){
-        double x=0,y=0,orix=0,oriy=0,vel=0;
-        for(size_t i = 0; i<pop.size();++i){
-            orix+=cos(pop[i].ori)*weights[i];
-            oriy+=sin(pop[i].ori)*weights[i];
-            x+=pop[i].x*weights[i];
-            y+=pop[i].y*weights[i];
-            vel+=pop[i].vel*weights[i];
-        }
-        double sum = 0;
-        for (const auto& w: weights) sum+=w;
-        x /= sum;
-        y /= sum;
-        orix /= sum;
-        oriy /= sum;
-        vel /= sum;
-        return {x,y,atan2(oriy,orix),vel};
-    }
-
     py::tuple get_est(){
         // py::print(__func__,"flush"_a=true);
-        auto est = _get_est();
+        auto est = model->get_est(pop, weights);
         return py::make_tuple(est.x,est.y,est.ori,est.vel);
     }
 
     double get_est_meas(){
         // py::print(__func__,"flush"_a=true);
-        return model->_get_meas(_get_est()).dist - model->get_meas().dist;
+        return model->_get_meas(model->get_est(pop, weights)).dist
+                - model->get_meas().dist;
     }
     
     void resample(RESAMPLE_TYPE type){
@@ -175,6 +157,11 @@ PYBIND11_MODULE(PFlib, m){
         .def("add_circle", &FastMap::add_circle)
         .def("get_meas", &FastMap::get_meas);
 
+    // py::class_<HeightMap>(m, "HeightMap")
+    //     .def(py::init<py::array_t<double>>());
+    //     // .def(py::init<>())
+    //     // .def("set", &HeightMap::set);
+
     py::class_<Model>(m, "Model")
         .def(py::init<double, double, double, double, double, double, double>())
         .def("set", &Model::set)
@@ -185,4 +172,5 @@ PYBIND11_MODULE(PFlib, m){
 
     py::class_<Model::Measurment>(m, "Model.Measurment")
         .def("randomize",&Model::Measurment::randomize);
+        // .def("get",&Model::Measurment::get);
 }

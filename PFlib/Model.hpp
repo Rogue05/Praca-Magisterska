@@ -37,11 +37,13 @@ struct Model{
     struct Measurment{
         double dist;
         
-        std::default_random_engine gen;
         void randomize(double var){
+            static std::default_random_engine gen;
             static std::normal_distribution<double> dx(1.,var);
             dist *= dx(gen);
         }
+
+
     };
 
     Model(): real_state({0,0,0,0}){}
@@ -99,6 +101,25 @@ struct Model{
             real_state.ori,
             real_state.vel};
         return py::cast(ret);
+    }
+
+    State get_est(std::vector<State>& pop, std::vector<double>& weights){
+        double x=0,y=0,orix=0,oriy=0,vel=0;
+        for(size_t i = 0; i<pop.size();++i){
+            orix+=cos(pop[i].ori)*weights[i];
+            oriy+=sin(pop[i].ori)*weights[i];
+            x+=pop[i].x*weights[i];
+            y+=pop[i].y*weights[i];
+            vel+=pop[i].vel*weights[i];
+        }
+        double sum = 0;
+        for (const auto& w: weights) sum+=w;
+        x /= sum;
+        y /= sum;
+        orix /= sum;
+        oriy /= sum;
+        vel /= sum;
+        return {x,y,atan2(oriy,orix),vel};
     }
 
     void update(double dori, double dvel){
