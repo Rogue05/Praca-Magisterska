@@ -18,10 +18,11 @@
 // };
 
 struct Model{
-    // double vel;
     FastMap* map;
+    double maxvel;
     std::default_random_engine gen;
     std::normal_distribution<double> dvn, dorin;
+    std::uniform_real_distribution<double> ro, rv;
 
 
     struct State{
@@ -38,19 +39,18 @@ struct Model{
         
         std::default_random_engine gen;
         void randomize(double var){
-            // std::uniform_real_distribution<double> dx(0.,var);
             static std::normal_distribution<double> dx(1.,var);
             dist *= dx(gen);
         }
     };
 
     Model(): real_state({0,0,0,0}){}
-    Model(double x_, double y_, double z_, double vel_, double sigv, double sigori):
+    Model(double x_, double y_, double z_, double vel_, double maxvel_, double sigv, double sigori):
         real_state({x_, y_, z_, vel_}),
-        // vel(vel_),
         dvn(0,sigv),
-        dorin(0,sigori)
-        {}
+        dorin(0,sigori),
+        ro(0.0,PI2),
+        rv(0.0,maxvel_){}
 
     Measurment _get_meas(const State &st){
         Measurment ret;
@@ -59,8 +59,6 @@ struct Model{
     }
 
     State get_random_state(){
-        static std::uniform_real_distribution<double> ro(0.0,PI2),
-                                                    rv(0.0,20.0);
         State st;
         map->set_random_pos(st.x,st.y);
         st.ori = ro(gen);
@@ -74,7 +72,11 @@ struct Model{
 
     double get_meas_prob(const State &st, const Measurment &meas){
         double m = _get_meas(st).dist;
-        return (1.-(double)fabs(meas.dist-m)/1000/sqrt(2.));//TODO hack 1000 bo taka mapa
+        double sig = 1000*sqrt(2)/3;
+        // double sig = 100;
+        double p = (meas.dist-m)/sig;
+        return exp(-p*p/2)/sig/sqrt(PI2);
+        // return (1.-(double)fabs(meas.dist-m)/1000/sqrt(2.));//TODO hack 1000 bo taka mapa
     }
 
     void set_map(FastMap *mapc){
@@ -100,21 +102,15 @@ struct Model{
     }
 
     void update(double dori, double dvel){
-        // drift(real_state,dori);
         real_state.vel += dvel;
         real_state.ori += dori;
         real_state.update(map);
     }
 
-    // void drift(State &p, double dori, double sigv, double sigori){
     void drift(State &p, double dori){
-        // static std::normal_distribution<double> dvn(0,sigv), dorin(0,sigori);
         p.vel += dvn(gen);
         p.ori += dori + dorin(gen);
         p.update(map);
-        // if (map->get_meas(p.x,p.y,p.ori)<tvel) p.ori += PI;
-        // p.x += cos(p.ori)*p.vel;
-        // p.y += sin(p.ori)*p.vel;
     }
 
     bool is_valid(const State& st){

@@ -82,14 +82,14 @@ struct ParticleFilter{
         py::print("initialized weights");
     }
 
-    py::tuple get_est(){
-        // py::print(__func__,"flush"_a=true);
-        double x=0,y=0,orix=0,oriy=0;
+    Model::State _get_est(){
+        double x=0,y=0,orix=0,oriy=0,vel=0;
         for(size_t i = 0; i<pop.size();++i){
             orix+=cos(pop[i].ori)*weights[i];
             oriy+=sin(pop[i].ori)*weights[i];
             x+=pop[i].x*weights[i];
             y+=pop[i].y*weights[i];
+            vel+=pop[i].vel*weights[i];
         }
         double sum = 0;
         for (const auto& w: weights) sum+=w;
@@ -97,7 +97,19 @@ struct ParticleFilter{
         y /= sum;
         orix /= sum;
         oriy /= sum;
-        return py::make_tuple(x,y,atan2(oriy,orix));
+        vel /= sum;
+        return {x,y,atan2(oriy,orix),vel};
+    }
+
+    py::tuple get_est(){
+        // py::print(__func__,"flush"_a=true);
+        auto est = _get_est();
+        return py::make_tuple(est.x,est.y,est.ori,est.vel);
+    }
+
+    double get_est_meas(){
+        // py::print(__func__,"flush"_a=true);
+        return model->_get_meas(_get_est()).dist - model->get_meas().dist;
     }
     
     void resample(RESAMPLE_TYPE type){
@@ -153,6 +165,7 @@ PYBIND11_MODULE(PFlib, m){
         .def("set_model", &ParticleFilter::set_model)
         .def("update_weights", &ParticleFilter::update_weights)
         .def("resample", &ParticleFilter::resample)
+        .def("get_est_meas", &ParticleFilter::get_est_meas)
         .def("drift", &ParticleFilter::drift);
 
     py::class_<FastMap>(m, "FastMap")
@@ -163,7 +176,7 @@ PYBIND11_MODULE(PFlib, m){
         .def("get_meas", &FastMap::get_meas);
 
     py::class_<Model>(m, "Model")
-        .def(py::init<double, double, double, double, double, double>())
+        .def(py::init<double, double, double, double, double, double, double>())
         .def("set", &Model::set)
         .def("get", &Model::get)
         .def("get_meas", &Model::get_meas)
