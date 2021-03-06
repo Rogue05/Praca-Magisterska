@@ -33,7 +33,7 @@ model = pf.Model(*pos,ori,vel,30, .1,.03)
 
 dori = -np.pi/30
 
-pop_size = 1000
+pop_size = 10000
 model.set_map(mapa)
 fir.set_model(model)
 fir.setup(pop_size)

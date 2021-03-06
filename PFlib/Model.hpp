@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <random>
+#include <memory>
 
 #include <pybind11/pybind11.h> // print
 
@@ -18,7 +19,7 @@
 // };
 
 struct Model{
-    FastMap* map;
+    std::shared_ptr<FastMap> map;
     double maxvel;
     std::default_random_engine gen;
     std::normal_distribution<double> dvn, dorin;
@@ -27,7 +28,7 @@ struct Model{
 
     struct State{
         double x,y,ori,vel;
-        void update(FastMap* map){
+        void update(std::shared_ptr<FastMap> map){
             if (map->get_meas(x,y,ori)<vel) ori += PI;
             x += cos(ori)*vel;
             y += sin(ori)*vel;
@@ -81,7 +82,7 @@ struct Model{
         // return (1.-(double)fabs(meas.dist-m)/1000/sqrt(2.));//TODO hack 1000 bo taka mapa
     }
 
-    void set_map(FastMap *mapc){
+    void set_map(std::shared_ptr<FastMap> mapc){
         map = mapc;
     }
 

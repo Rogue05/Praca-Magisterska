@@ -150,12 +150,13 @@ PYBIND11_MODULE(PFlib, m){
         .def("get_est_meas", &ParticleFilter::get_est_meas)
         .def("drift", &ParticleFilter::drift);
 
-    py::class_<FastMap>(m, "FastMap")
-        .def(py::init<double>())
+    py::class_<FastMap, std::shared_ptr<FastMap>>(m, "FastMap")
+        // .def(py::init<double>())
+        .def(py::init(&FastMap::create))
         .def("get_grid", &FastMap::get_grid)
         .def("add_line", &FastMap::add_line)
-        .def("add_circle", &FastMap::add_circle)
-        .def("get_meas", &FastMap::get_meas);
+        .def("add_circle", &FastMap::add_circle);
+        // .def("get_meas", &FastMap::get_meas);
 
     // py::class_<HeightMap>(m, "HeightMap")
     //     .def(py::init<py::array_t<double>>());
