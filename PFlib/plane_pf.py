@@ -32,10 +32,10 @@ mapa = pf.HeightMap(grid)
 
 fir = pf.ParticleFilter()
 
-pos = np.array([map_size/2,map_size/2])
+pos = np.array(grid.shape)/100
 ori = 0
 vel = 10
-model = pf.Model(mapa, *pos,ori,vel,30, .1,.03)
+model = pf.Model(*pos,ori,vel,30, .1,.03)
 
 # dori = -np.pi/30
 

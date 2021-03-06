@@ -19,7 +19,7 @@
 // };
 
 struct Model{
-    std::shared_ptr<FastMap> map;
+    Map* map;
     double maxvel;
     std::default_random_engine gen;
     std::normal_distribution<double> dvn, dorin;
@@ -28,7 +28,7 @@ struct Model{
 
     struct State{
         double x,y,ori,vel;
-        void update(std::shared_ptr<FastMap> map){
+        void update(Map* map){
             if (map->get_meas(x,y,ori)<vel) ori += PI;
             x += cos(ori)*vel;
             y += sin(ori)*vel;
@@ -82,7 +82,7 @@ struct Model{
         // return (1.-(double)fabs(meas.dist-m)/1000/sqrt(2.));//TODO hack 1000 bo taka mapa
     }
 
-    void set_map(std::shared_ptr<FastMap> mapc){
+    void set_map(Map* mapc){
         map = mapc;
     }
 

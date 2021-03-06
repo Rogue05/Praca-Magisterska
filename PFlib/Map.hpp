@@ -26,6 +26,7 @@ struct Map{
 
 struct FastMap : public Map{
 // struct FastMap{
+private:
     std::default_random_engine gen;
 
     class CollObj{
@@ -103,8 +104,10 @@ struct FastMap : public Map{
         add_line(0.,1.,0.);
     }
 
-    static std::shared_ptr<FastMap> create(double bound){
-        return std::make_shared<FastMap>(bound);
+public:
+    static FastMap* create(double bound){
+        // return std::make_shared<FastMap>(bound);
+        return new FastMap(bound);
     }
 
     std::vector<std::vector<bool>> get_grid(){
@@ -160,28 +163,35 @@ struct FastMap : public Map{
     }
 };
 
-// struct HeightMap : public Map{
-//     std::vector<std::vector<double>> grid;
-//     HeightMap(py::array_t<double> grid_){
-//         auto r = grid_.unchecked<2>();
-//         grid.resize(r.shape(0));
-//         for (auto& g:grid)
-//             g.resize(r.shape(1));
-//         for (py::ssize_t x = 0; x < r.shape(0); ++x)
-//             for (py::ssize_t y = 0; y < r.shape(1); ++y)
-//                 grid[x][y] = r(x,y);
-//         // py::print(r.shape(0),r.shape(1),r.shape(0)*r.shape(1));
-//     }
+struct HeightMap : public Map{
+private:
+    std::vector<std::vector<double>> grid;
+    HeightMap(const py::array_t<double>& grid_){
+        auto r = grid_.unchecked<2>();
+        grid.resize(r.shape(0));
+        for (auto& g:grid)
+            g.resize(r.shape(1));
+        for (py::ssize_t x = 0; x < r.shape(0); ++x)
+            for (py::ssize_t y = 0; y < r.shape(1); ++y)
+                grid[x][y] = r(x,y);
+        // py::print(r.shape(0),r.shape(1),r.shape(0)*r.shape(1));
+    }
 
-//     double get_meas(double x, double y, double ori) override{
-//         return 2.;
-//     }
+public:
+    static HeightMap* create(const py::array_t<double>& grid_){
+        // return std::make_shared<HeightMap>(grid_);
+        return new HeightMap(grid_);
+    }
 
-//     void set_random_pos(double& x, double& y) override{
-//         return;
-//     }
+    double get_meas(double x, double y, double ori) override{
+        return 2.;
+    }
 
-//     bool is_valid(double x, double y) override{
-//         return true;
-//     }
-// };
+    void set_random_pos(double& x, double& y) override{
+        return;
+    }
+
+    bool is_valid(double x, double y) override{
+        return true;
+    }
+};
