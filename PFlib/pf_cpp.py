@@ -124,8 +124,8 @@ def iter(i):
 
     prev = pos.copy()
     
-    fir.drift(dori)
-    model.update(dori,0)
+    fir.drift(dori,True)
+    model.update(dori,0,True)
     pos[0], pos[1], ori, tmp = model.get()
 
     poss.append(prev)

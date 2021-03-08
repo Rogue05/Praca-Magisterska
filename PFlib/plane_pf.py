@@ -14,161 +14,181 @@ import pandas as pd
 import PFlib as pf
 import numpy as np
 
-print('START',flush=True)
-filename = '66574_759325_M-33-35-C-a-3-1.xyz'
-zipfilename = filename + '.zip'
-data = np.array(pd.read_csv(filename,header=None,delimiter='\s+')).T
-x,y,z = data[0].astype(np.int64),data[1].astype(np.int64),data[2]
-x -= x.min()
-y -= y.min()
+from scipy.ndimage.filters import gaussian_filter
 
-print('loaded data',flush=True)
-print(x.shape, y.shape, z.shape)
+# print('START',flush=True)
+# # filename = '66574_759325_M-33-35-C-a-3-1.xyz'
+# # zipfilename = filename + '.zip'
+# # data = np.array(pd.read_csv(filename,header=None,delimiter='\s+')).T
+# # x,y,z = data[0].astype(np.int64),data[1].astype(np.int64),data[2]
+# # x -= x.min()
+# # y -= y.min()
 
-grid = np.zeros((x.max()+1,y.max()+1))#+np.average(z)
-grid[x,y] = z - z.min()
+# # print('loaded data',flush=True)
+# # print(x.shape, y.shape, z.shape)
+
+# # grid = np.zeros((x.max()+1,y.max()+1))#+np.average(z)
+# # grid[x,y] = z - z.min()
+
+# with open('map.npy','rb') as file:
+#     grid = np.load(file)
+
+# grid = gaussian_filter(grid, sigma=20)
+from noise import pnoise
+grid = pnoise(2**10,2**10,2**7)
+
+print('minmax =',grid.max(),grid.min())
+
+# x,y = np.meshgrid(np.linspace(0,np.pi*2,1000),np.linspace(0,np.pi*2,1000))
+# grid = np.sin(x)+np.sin(y)
 
 mapa = pf.HeightMap(grid)
 
-fir = pf.ParticleFilter()
-
-pos = np.array(grid.shape)/100
-ori = 0
-vel = 10
-model = pf.Model(*pos,ori,vel,30, .1,.03)
-
-# dori = -np.pi/30
-
-# pop_size = 1000
-model.set_map(mapa)
-# fir.set_model(model)
-# fir.setup(pop_size)
-
-# errs = []
-# errs2 = []
-
-# pop = None
-
-# ori1 = []
-# ori2 = []
-# oris = []
-
-
-# def print_err():
-#     global pest,ws
-#     estpos = np.array(fir.get_est())
-#     print('\t\t\t\t\t\t\t\t========',fir.get_est_meas())
-
-#     pop = fir.get_pop()
-#     ws = fir.get_weights()
-#     # print(np.var(ws),ws)
-
-#     # plt.figure(2)
-#     # plt.cla()
-#     # plt.hist(ws,bins=100)
-
-#     estpos[:2] = np.average(pop,axis=0,weights=ws)[:2]
-
-#     pest = estpos
-#     posori = np.array([*pos,ori%(2*np.pi),vel])
-#     diffori = (np.cos(estpos[2])-np.cos(posori[2]))**2+(np.sin(estpos[2])-np.sin(posori[2]))**2
-
-#     diff = estpos-posori
-#     diff[2] = map_size*diffori/2/np.pi
-
-#     print(estpos)
-#     errs.append(np.array([diff[0],diff[1],diff[2]]))
-
-# poss = []
-# ests = []
-
-# plt.ion()
-# fig = plt.figure(figsize=(8,8))
-# plt.axis('equal')
-# plt.xlim([0,map_size])
-# plt.ylim([0,map_size])
-
-# grid = np.array(mapa.get_grid()).T
-# plt.imshow(grid,cmap='gray')
-# points, = plt.plot([],[],'.b',alpha=0.01)
-# # from matplotlib import cm
-
-# # points = plt.scatter([],[])
-# # # print(points.__dict__)
-
-# posline, = plt.plot([],[],'.r',ms=15)
-# estline, = plt.plot([],[],'.y',ms=15)
+# plt.imshow(grid.T)
 # plt.show()
 
-# oris = []
-# step=np.pi/5/2
+fir = pf.ParticleFilter()
 
+# pos = np.array(grid.shape)/100
+pos = np.array(grid.shape)/3
+ori = np.pi/4
+vel = 1
+model = pf.Model(*pos,ori,vel,1.5*vel+0.01, .01,.03)
+model.set_map(mapa)
 
-# # @profile
-# def iter(i):
-#     global ori
-#     if not plt.fignum_exists(fig.number):
-#         # break;
-#         return False
+dori = -np.pi/30
 
-#     dori = np.random.uniform(-step,step)
+pop_size = 10000
+fir.set_model(model)
+fir.setup(pop_size)
 
-#     m = model.get_meas()
-#     m.randomize(.05)
-#     print(i,m,pos,ori,flush=True)
+errs = []
+erri = []
 
-#     fir.update_weights(m)
+pop = None
 
-#     print_err()
+def print_err():
+    global pest,ws
+    estpos = np.array(fir.get_est())
+    # print('\t\t\t\t\t\t\t\t========',fir.get_est_meas())
+    errs.append(fir.get_est_meas())
 
-#     # Neff = fir.get_effective_N()
-#     # if Neff < pop_size*0.8:
-#     #     print('resample',Neff,flush=True)
-#     #     fir.resample(pf.RESAMPLE_TYPE.SUS)
-#     fir.resample(pf.RESAMPLE_TYPE.SUS)
-#     # fir.resample(pf.RESAMPLE_TYPE.ROULETTE_WHEEL)
+    pop = fir.get_pop()
+    ws = fir.get_weights()
+    # print(np.var(ws),ws)
 
-#     prev = pos.copy()
+    # plt.figure(2)
+    # plt.cla()
+    # plt.hist(ws,bins=100)
+
+    estpos[:2] = np.average(pop,axis=0,weights=ws)[:2]
+
+    pest = estpos
+    posori = np.array([*pos,ori%(2*np.pi),vel])
+    diffori = (np.cos(estpos[2])-np.cos(posori[2]))**2+(np.sin(estpos[2])-np.sin(posori[2]))**2
+
+    diff = estpos-posori
+    diff[2] = grid.shape[0]*diffori/2/np.pi
+
+    # print(estpos)
+    # errs.append(np.array([diff[0],diff[1],diff[2]]))
+
+poss = []
+ests = []
+
+plt.ion()
+fig = plt.figure(figsize=(16,8))
+plt.subplot(121)
+plt.axis('equal')
+plt.xlim([0,grid.shape[0]])
+plt.ylim([0,grid.shape[1]])
+
+# grid = np.array(mapa.get_grid()).T
+# print(grid.shape)
+plt.imshow(grid)
+# plt.imshow(grid,cmap='gray')
+
+# points, = plt.plot([],[],'.w',alpha=0.01)
+points, = plt.plot([],[],'.w',ms=1)
+posline, = plt.plot([],[],'.r',ms=15)
+estline, = plt.plot([],[],'.y',ms=15)
+plt.show()
+
+# import time
+# time.sleep(5)
+
+oris = []
+step=np.pi/5/2
+plt.subplot(122)
+errp, = plt.plot([],[])
+plt.xlim([0,1000])
+plt.ylim([0,np.abs(grid.max()-grid.min())])
+
+# @profile
+def iter(i):
+    global ori
+    if not plt.fignum_exists(fig.number):
+        # break;
+        return False
+
+    dori = 0
+
+    m = model.get_meas()
+    m.randomize(.0)
+    print(i,m.get(),pos,ori,flush=True)
+
+    fir.update_weights(m)
+
+    # print('updated weights',flush=True)
+
+    print_err()
+    erri.append(i)
     
-#     fir.drift(dori)
-#     model.update(dori,0)
-#     pos[0], pos[1], ori, tmp = model.get()
+    Neff = fir.get_effective_N()
+    if Neff < pop_size*0.8:
+        print('resample',Neff,flush=True)
+        fir.resample(pf.RESAMPLE_TYPE.SUS)
+    # fir.resample(pf.RESAMPLE_TYPE.SUS)
+    # fir.resample(pf.RESAMPLE_TYPE.ROULETTE_WHEEL)
 
-#     poss.append(prev)
-#     ests.append(pest[:2])
+    prev = pos.copy()
+    
+    fir.drift(dori, False)
+    model.update(dori,0, False)
+    pos[0], pos[1], ori, tmp = model.get()
+
+    poss.append(prev)
+    ests.append(pest[:2])
 
 
-#     pop = fir.get_pop()
-#     points.set_data(pop[:,0],pop[:,1])
-#     posline.set_data(*prev)
-#     estline.set_data(*pest[:2])
+    pop = fir.get_pop()
+    points.set_data(pop[:,0],pop[:,1])
+    posline.set_data(*prev)
+    estline.set_data(*pest[:2])
+    errp.set_data(erri, errs)
 
-#     # if i%10:
-#     #     return points,posline,estline
-#     # #     return True
-#     fig.canvas.draw()
-#     fig.canvas.flush_events()
-#     # return points,posline,estline
-#     return True
+    if i%10:
+    #     return points,posline,estline
+        return True
+    fig.canvas.draw()
+    fig.canvas.flush_events()
+    # return points,posline,estline
+    return True
 
-# def init():
-#     points.set_data([],[])
-#     posline.set_data([],[])
-#     estline.set_data([],[])
-#     return points,posline,estline
+def init():
+    points.set_data([],[])
+    posline.set_data([],[])
+    estline.set_data([],[])
+    return points,posline,estline
 
-# for i in range(1000):
-#     if not iter(i):
-#         break
-#     # if i == 10:
-#     #     import time
-#     #     time.sleep(5)
-#     #     break
+for i in range(1000):
+    if not iter(i):
+        break
 
-# # anim = FuncAnimation(fig, iter, init_func=init,
-# #                       # frames=200, interval=40)
-# #                       frames=1000, interval=40)
-# # # anim.save('pf_test.gif')
-# # writergif = PillowWriter(fps=25)
-# # anim.save("pf_test.gif",writer=writergif)
+# anim = FuncAnimation(fig, iter, init_func=init,
+#                       # frames=200, interval=40)
+#                       frames=1000, interval=40)
+# # anim.save('pf_test.gif')
+# writergif = PillowWriter(fps=25)
+# anim.save("pf_test.gif",writer=writergif)
 

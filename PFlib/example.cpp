@@ -26,7 +26,7 @@ struct ParticleFilter{
 
     Model* model;
     
-    std::vector<Model::State> pop;
+    std::vector<State> pop;
     std::vector<double> weights;
 
     py::array get_pop(){
@@ -46,7 +46,7 @@ struct ParticleFilter{
         model=&model_;
     }
 
-    void update_weights(Model::Measurment meas){
+    void update_weights(Measurment meas){
         // py::print(__func__,"flush"_a=true);
         weights.resize(pop.size());
 
@@ -90,13 +90,21 @@ struct ParticleFilter{
 
     double get_est_meas(){
         // py::print(__func__,"flush"_a=true);
-        return model->_get_meas(model->get_est(pop, weights)).dist
-                - model->get_meas().dist;
+        auto est_prob = model->get_meas_prob(
+            model->get_est(pop, weights),
+            model->get_meas());
+        auto real_prob = model->get_meas_prob(
+            model->get_real(),
+            model->get_meas());
+        py::print(__func__, est_prob,real_prob);
+        // return fabs(_get_meas() -real_prob);
+        return fabs(model->_get_meas(model->get_est(pop, weights)).dist
+                - model->get_meas().dist);
     }
     
     void resample(RESAMPLE_TYPE type){
         // py::print(__func__,"flush"_a=true);
-        std::vector<Model::State> new_pop;
+        std::vector<State> new_pop;
         if (type == ROULETTE_WHEEL){
             std::discrete_distribution<int> dist(weights.begin(),weights.end());
             for (size_t i=0;i<pop.size();++i) new_pop.push_back(pop[dist(gen)]);
@@ -121,10 +129,10 @@ struct ParticleFilter{
     }
 
     // void drift(double dori, double sigv, double sigori){
-    void drift(double dori){
+    void drift(double dori, bool bounded = true){
         // py::print(__func__,"flush"_a=true);
         for(auto &p : pop){
-            model->drift(p, dori);
+            model->drift(p, dori, bounded);
         }
     }
 };
@@ -159,7 +167,8 @@ PYBIND11_MODULE(PFlib, m){
         .def("add_circle", &FastMap::add_circle);
 
     py::class_<HeightMap, Map, std::shared_ptr<HeightMap>>(m, "HeightMap")
-        .def(py::init(&HeightMap::create));
+        .def(py::init(&HeightMap::create))
+        .def("get_grid", &HeightMap::get_grid);
 
     py::class_<Model>(m, "Model")
         .def(py::init<double, double, double, double, double, double, double>())
@@ -169,7 +178,7 @@ PYBIND11_MODULE(PFlib, m){
         .def("set_map", &Model::set_map)
         .def("update", &Model::update);
 
-    py::class_<Model::Measurment>(m, "Model.Measurment")
-        .def("randomize",&Model::Measurment::randomize);
-        // .def("get",&Model::Measurment::get);
+    py::class_<Measurment>(m, "Measurment")
+        .def("randomize",&Measurment::randomize)
+        .def("get",&Measurment::get);
 }

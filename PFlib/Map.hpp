@@ -14,6 +14,10 @@ struct Map{
         py::print(__func__, "is not implemented");
         return 0.0;
     }
+    virtual double get_meas_prob(double, double, double, double){
+        py::print(__func__, "is not implemented");
+        return 0.0;
+    }
     virtual void set_random_pos(double&, double&){
         py::print(__func__, "is not implemented");
     }
@@ -142,6 +146,14 @@ public:
         return meas;
     }
 
+    double get_meas_prob(double real, double x, double y, double ori) override{
+    // double get_meas(double x, double y, double ori){
+        double meas = get_meas(x,y,ori);
+        double sig = (double)width*sqrt(2)/3;
+        double p = (meas-real)/sig;
+        return exp(-p*p/2)/sig/sqrt(PI2);
+    }
+
     bool is_valid(double x, double y) override{
     // bool is_valid(double x, double y){
         bool ret = true;
@@ -165,16 +177,24 @@ public:
 
 struct HeightMap : public Map{
 private:
+    std::default_random_engine gen;
     std::vector<std::vector<double>> grid;
+    double gmin, gmax;
+
     HeightMap(const py::array_t<double>& grid_){
         auto r = grid_.unchecked<2>();
         grid.resize(r.shape(0));
         for (auto& g:grid)
             g.resize(r.shape(1));
+
+        gmin = 10000;
+        gmax = -gmin;
         for (py::ssize_t x = 0; x < r.shape(0); ++x)
-            for (py::ssize_t y = 0; y < r.shape(1); ++y)
+            for (py::ssize_t y = 0; y < r.shape(1); ++y){
                 grid[x][y] = r(x,y);
-        // py::print(r.shape(0),r.shape(1),r.shape(0)*r.shape(1));
+                if (grid[x][y]>gmax) gmax = grid[x][y];
+                if (grid[x][y]<gmin) gmin = grid[x][y];
+            }
     }
 
 public:
@@ -184,14 +204,34 @@ public:
     }
 
     double get_meas(double x, double y, double ori) override{
-        return 2.;
+        return grid[int(x)][int(y)];
     }
 
     void set_random_pos(double& x, double& y) override{
-        return;
+        std::uniform_real_distribution<double> w(0.0,(double)grid.size()-1.), // TODO 100 bo hack
+                                                h(0.0,(double)grid[0].size()-1.);
+        do{
+            x = w(gen);
+            y = h(gen);
+        }while(!is_valid(x,y));
+    
     }
 
     bool is_valid(double x, double y) override{
+        if (x<0.0 || y< 0.0 || x >= grid.size() || y >= grid[0].size())
+            return false;
         return true;
+    }
+
+    std::vector<std::vector<double>> get_grid(){
+        return grid;
+    }
+
+    double get_meas_prob(double real, double x, double y, double ori) override{
+    // double get_meas(double x, double y, double ori){
+        double meas = get_meas(x,y,ori);
+        double sig = (gmax-gmin)/30;
+        double p = (meas-real)/sig;
+        return exp(-p*p/2);///sig/sqrt(PI2);
     }
 };
