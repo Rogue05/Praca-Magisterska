@@ -26,7 +26,7 @@ struct ParticleFilter{
 
     Model* model;
     
-    std::vector<State> pop;
+    std::vector<Model::State> pop;
     std::vector<double> weights;
 
     py::array get_pop(){
@@ -46,17 +46,13 @@ struct ParticleFilter{
         model=&model_;
     }
 
-    void update_weights(Measurment meas){
+    void update_weights(){
         // py::print(__func__,"flush"_a=true);
         weights.resize(pop.size());
 
         double sum=0;
         for (size_t i = 0;i<pop.size();++i){
-            if(!model->is_valid(pop[i])){
-                weights[i]=0;
-                continue;
-            }
-            weights[i] = weights[i]*model->get_meas_prob(pop[i],meas);
+            weights[i] = weights[i]*model->get_state_prob(pop[i]);
             sum+=weights[i];
         }
         for(auto& w : weights) w/=sum;
@@ -71,10 +67,7 @@ struct ParticleFilter{
 
     void setup(size_t N){
         py::print("clearing pop");
-        pop.resize(0);
-        for (size_t i=0;i<N;++i){
-            pop.push_back(model->get_random_state());
-        }
+        pop = model->get_random_states(N);
         py::print("initialized pop",N);
         
         weights.resize(pop.size());
@@ -84,27 +77,14 @@ struct ParticleFilter{
 
     py::tuple get_est(){
         // py::print(__func__,"flush"_a=true);
-        auto est = model->get_est(pop, weights);
-        return py::make_tuple(est.x,est.y,est.ori,est.vel);
-    }
-
-    double get_est_meas(){
-        // py::print(__func__,"flush"_a=true);
-        auto est_prob = model->get_meas_prob(
-            model->get_est(pop, weights),
-            model->get_meas());
-        auto real_prob = model->get_meas_prob(
-            model->get_real(),
-            model->get_meas());
-        py::print(__func__, est_prob,real_prob);
-        // return fabs(_get_meas() -real_prob);
-        return fabs(model->_get_meas(model->get_est(pop, weights)).dist
-                - model->get_meas().dist);
+        return model->get_est(pop, weights);
+        // auto est = model->get_est(pop, weights);
+        // return py::make_tuple(est.x,est.y,est.ori,est.vel);
     }
     
     void resample(RESAMPLE_TYPE type){
         // py::print(__func__,"flush"_a=true);
-        std::vector<State> new_pop;
+        std::vector<Model::State> new_pop;
         if (type == ROULETTE_WHEEL){
             std::discrete_distribution<int> dist(weights.begin(),weights.end());
             for (size_t i=0;i<pop.size();++i) new_pop.push_back(pop[dist(gen)]);
@@ -128,12 +108,9 @@ struct ParticleFilter{
         for (auto& w: weights) w=1./pop.size();
     }
 
-    // void drift(double dori, double sigv, double sigori){
-    void drift(double dori, bool bounded = true){
-        // py::print(__func__,"flush"_a=true);
-        for(auto &p : pop){
-            model->drift(p, dori, bounded);
-        }
+    void drift(double dori){
+        // py::print(__func__,"flush"_a=true
+        model->drift_states(pop);
     }
 };
 
@@ -155,7 +132,7 @@ PYBIND11_MODULE(PFlib, m){
         .def("set_model", &ParticleFilter::set_model)
         .def("update_weights", &ParticleFilter::update_weights)
         .def("resample", &ParticleFilter::resample)
-        .def("get_est_meas", &ParticleFilter::get_est_meas)
+        // .def("get_est_meas", &ParticleFilter::get_est_meas)
         .def("drift", &ParticleFilter::drift);
 
     py::class_<Map, std::shared_ptr<Map>>(m, "Map");
@@ -172,13 +149,12 @@ PYBIND11_MODULE(PFlib, m){
 
     py::class_<Model>(m, "Model")
         .def(py::init<double, double, double, double, double, double, double>())
-        .def("set", &Model::set)
-        .def("get", &Model::get)
-        .def("get_meas", &Model::get_meas)
+        .def("get_real", &Model::get_real)
+        .def("update_meas", &Model::update_meas)
         .def("set_map", &Model::set_map)
         .def("update", &Model::update);
 
-    py::class_<Measurment>(m, "Measurment")
-        .def("randomize",&Measurment::randomize)
-        .def("get",&Measurment::get);
+    // py::class_<Model::Measurment>(m, "Model.Measurment")
+    //     .def("randomize",&Model::Measurment::randomize)
+    //     .def("get",&Model::Measurment::get);
 }

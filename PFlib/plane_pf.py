@@ -14,42 +14,18 @@ import pandas as pd
 import PFlib as pf
 import numpy as np
 
-from scipy.ndimage.filters import gaussian_filter
+# from scipy.ndimage.filters import gaussian_filter
 
-# print('START',flush=True)
-# # filename = '66574_759325_M-33-35-C-a-3-1.xyz'
-# # zipfilename = filename + '.zip'
-# # data = np.array(pd.read_csv(filename,header=None,delimiter='\s+')).T
-# # x,y,z = data[0].astype(np.int64),data[1].astype(np.int64),data[2]
-# # x -= x.min()
-# # y -= y.min()
-
-# # print('loaded data',flush=True)
-# # print(x.shape, y.shape, z.shape)
-
-# # grid = np.zeros((x.max()+1,y.max()+1))#+np.average(z)
-# # grid[x,y] = z - z.min()
-
-# with open('map.npy','rb') as file:
-#     grid = np.load(file)
-
-# grid = gaussian_filter(grid, sigma=20)
 from noise import pnoise
 grid = pnoise(2**10,2**10,2**7)
 
 print('minmax =',grid.max(),grid.min())
 
-# x,y = np.meshgrid(np.linspace(0,np.pi*2,1000),np.linspace(0,np.pi*2,1000))
-# grid = np.sin(x)+np.sin(y)
-
 mapa = pf.HeightMap(grid)
 
-# plt.imshow(grid.T)
-# plt.show()
 
 fir = pf.ParticleFilter()
 
-# pos = np.array(grid.shape)/100
 pos = np.array(grid.shape)/3
 ori = np.pi/4
 vel = 1
@@ -71,7 +47,7 @@ def print_err():
     global pest,ws
     estpos = np.array(fir.get_est())
     # print('\t\t\t\t\t\t\t\t========',fir.get_est_meas())
-    errs.append(fir.get_est_meas())
+    # errs.append(fir.get_est_meas())
 
     pop = fir.get_pop()
     ws = fir.get_weights()
@@ -135,7 +111,7 @@ def iter(i):
 
     m = model.get_meas()
     m.randomize(.0)
-    print(i,m.get(),pos,ori,flush=True)
+    print(i,m.get_real(),pos,ori,flush=True)
 
     fir.update_weights(m)
 
@@ -155,7 +131,7 @@ def iter(i):
     
     fir.drift(dori, False)
     model.update(dori,0, False)
-    pos[0], pos[1], ori, tmp = model.get()
+    pos[0], pos[1], ori, tmp = model.get_real()
 
     poss.append(prev)
     ests.append(pest[:2])
