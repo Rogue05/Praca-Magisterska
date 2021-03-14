@@ -23,6 +23,7 @@ struct Model: public ModelBase{
     std::uniform_real_distribution<double> ro, rv;
     double dv, dori;
     double meas;
+    bool bounce;
 
     struct State: public StateBase{
         double x,y,ori,vel;
@@ -30,8 +31,8 @@ struct Model: public ModelBase{
             :x(x_), y(y_), ori(ori_), vel(vel_){}
         State(): State(0.,0.,0.,0.){};
 
-        void update(Map* map){
-            if (map->get_meas(x,y,ori)<vel) ori += PI;
+        void update(Map* map, bool bounce){
+            if (bounce && map->get_meas(x,y,ori)<vel) ori += PI;
             x += cos(ori)*vel;
             y += sin(ori)*vel;
         }
@@ -39,13 +40,15 @@ struct Model: public ModelBase{
 
     Model(): real_state({0,0,0,0}){}
     Model(double x_, double y_, double z_,
-        double vel_, double maxvel_, double sigv, double sigori):
+        double vel_, double maxvel_, double sigv,
+        double sigori, bool bounce_ = true):
         real_state(x_, y_, z_, vel_),
         dvn(0,sigv),
         dorin(0,sigori),
         ro(0.0,PI2),
         rv(0.0,maxvel_),
-        meas(0){}
+        meas(0),
+        bounce(bounce_){}
 
     std::vector<State> get_random_states(size_t N){
         std::vector<State> pop;
@@ -106,14 +109,14 @@ struct Model: public ModelBase{
 
         real_state.vel += dvel_;
         real_state.ori += dori_;
-        real_state.update(map);
+        real_state.update(map, bounce);
     }
 
     void drift_states(std::vector<State>& pop){
         for(auto &p : pop){
             p.vel += dv + dvn(gen);
             p.ori += dori + dorin(gen);
-            p.update(map);
+            p.update(map, bounce);
         }
     }
 

@@ -204,6 +204,7 @@ public:
     }
 
     double get_meas(double x, double y, double ori) override{
+        if (!is_valid(x, y)) return -10000.0;
         return grid[int(x)][int(y)];
     }
 
@@ -230,7 +231,7 @@ public:
     double get_meas_prob(double real, double x, double y, double ori) override{
     // double get_meas(double x, double y, double ori){
         double meas = get_meas(x,y,ori);
-        double sig = (gmax-gmin)/30;
+        double sig = (gmax-gmin)/3;
         double p = (meas-real)/sig;
         return exp(-p*p/2);///sig/sqrt(PI2);
     }

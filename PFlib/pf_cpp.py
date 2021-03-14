@@ -50,11 +50,6 @@ plt.ylim([0,map_size])
 grid = np.array(mapa.get_grid()).T
 plt.imshow(grid,cmap='gray')
 points, = plt.plot([],[],'.b',alpha=0.01)
-# from matplotlib import cm
-
-# points = plt.scatter([],[])
-# # print(points.__dict__)
-
 posline, = plt.plot([],[],'.r',ms=15)
 estline, = plt.plot([],[],'.y',ms=15)
 plt.show()
@@ -86,8 +81,8 @@ def iter(i):
 
     prev = pos.copy()
     
-    fir.drift(dori)
     model.update(dori,0)
+    fir.drift()
     pos[0], pos[1], ori, tmp = model.get_real()
 
     poss.append(prev)

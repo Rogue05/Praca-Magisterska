@@ -108,7 +108,7 @@ struct ParticleFilter{
         for (auto& w: weights) w=1./pop.size();
     }
 
-    void drift(double dori){
+    void drift(){
         // py::print(__func__,"flush"_a=true
         model->drift_states(pop);
     }
@@ -149,6 +149,7 @@ PYBIND11_MODULE(PFlib, m){
 
     py::class_<Model>(m, "Model")
         .def(py::init<double, double, double, double, double, double, double>())
+        .def(py::init<double, double, double, double, double, double, double, bool>())
         .def("get_real", &Model::get_real)
         .def("update_meas", &Model::update_meas)
         .def("set_map", &Model::set_map)
