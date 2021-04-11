@@ -21,19 +21,21 @@ enum RESAMPLE_TYPE{
     SUS
 };
 
+template<typename ModelT, typename StateT>
 struct ParticleFilter{
     std::default_random_engine gen;
 
-    Model* model;
+    ModelT* model;
     
-    std::vector<Model::State> pop;
+    std::vector<StateT> pop;
     std::vector<double> weights;
 
     py::array get_pop(){
         // py::print(__func__,"flush"_a=true);
-        vector<vector<double>> ret;
-        for (const auto& p : pop) ret.push_back({p.x,p.y,p.ori});
-        return py::cast(ret);
+        // vector<vector<double>> ret;
+        // for (const auto& p : pop) ret.push_back({p.x,p.y,p.ori});
+        // return py::cast(ret);
+        return model->translate_pop(pop);
     }
     
 
@@ -42,7 +44,7 @@ struct ParticleFilter{
         return py::cast(weights);
     }
 
-    void set_model(Model &model_){
+    void set_model(ModelT &model_){
         model=&model_;
     }
 
@@ -84,7 +86,7 @@ struct ParticleFilter{
     
     void resample(RESAMPLE_TYPE type){
         // py::print(__func__,"flush"_a=true);
-        std::vector<Model::State> new_pop;
+        std::vector<StateT> new_pop;
         if (type == ROULETTE_WHEEL){
             std::discrete_distribution<int> dist(weights.begin(),weights.end());
             for (size_t i=0;i<pop.size();++i) new_pop.push_back(pop[dist(gen)]);
@@ -122,18 +124,29 @@ PYBIND11_MODULE(PFlib, m){
         .value("ROULETTE_WHEEL",RESAMPLE_TYPE::ROULETTE_WHEEL)
         .value("SUS",RESAMPLE_TYPE::SUS).export_values();
 
-    py::class_<ParticleFilter>(m,"ParticleFilter")
+    py::class_<ParticleFilter<Model,Model::State>>(m,"ParticleFilter")
         .def(py::init<>())
-        .def("get_effective_N", &ParticleFilter::get_effective_N)
-        .def("get_est",&ParticleFilter::get_est)
-        .def("setup", &ParticleFilter::setup)
-        .def("get_pop", &ParticleFilter::get_pop)
-        .def("get_weights", &ParticleFilter::get_weights)
-        .def("set_model", &ParticleFilter::set_model)
-        .def("update_weights", &ParticleFilter::update_weights)
-        .def("resample", &ParticleFilter::resample)
-        // .def("get_est_meas", &ParticleFilter::get_est_meas)
-        .def("drift", &ParticleFilter::drift);
+        .def("get_effective_N", &ParticleFilter<Model,Model::State>::get_effective_N)
+        .def("get_est",&ParticleFilter<Model,Model::State>::get_est)
+        .def("setup", &ParticleFilter<Model,Model::State>::setup)
+        .def("get_pop", &ParticleFilter<Model,Model::State>::get_pop)
+        .def("get_weights", &ParticleFilter<Model,Model::State>::get_weights)
+        .def("set_model", &ParticleFilter<Model,Model::State>::set_model)
+        .def("update_weights", &ParticleFilter<Model,Model::State>::update_weights)
+        .def("resample", &ParticleFilter<Model,Model::State>::resample)
+        .def("drift", &ParticleFilter<Model,Model::State>::drift);
+
+    py::class_<ParticleFilter<PlaneModel,PlaneModel::State>>(m,"PlaneParticleFilter")
+        .def(py::init<>())
+        .def("get_effective_N", &ParticleFilter<PlaneModel,PlaneModel::State>::get_effective_N)
+        .def("get_est",&ParticleFilter<PlaneModel,PlaneModel::State>::get_est)
+        .def("setup", &ParticleFilter<PlaneModel,PlaneModel::State>::setup)
+        .def("get_pop", &ParticleFilter<PlaneModel,PlaneModel::State>::get_pop)
+        .def("get_weights", &ParticleFilter<PlaneModel,PlaneModel::State>::get_weights)
+        .def("set_model", &ParticleFilter<PlaneModel,PlaneModel::State>::set_model)
+        .def("update_weights", &ParticleFilter<PlaneModel,PlaneModel::State>::update_weights)
+        .def("resample", &ParticleFilter<PlaneModel,PlaneModel::State>::resample)
+        .def("drift", &ParticleFilter<PlaneModel,PlaneModel::State>::drift);
 
     py::class_<Map, std::shared_ptr<Map>>(m, "Map");
 
@@ -145,15 +158,22 @@ PYBIND11_MODULE(PFlib, m){
 
     py::class_<HeightMap, Map, std::shared_ptr<HeightMap>>(m, "HeightMap")
         .def(py::init(&HeightMap::create))
+        .def("get_meas_prob", &HeightMap::get_meas_prob)
         .def("get_grid", &HeightMap::get_grid);
 
     py::class_<Model>(m, "Model")
         .def(py::init<double, double, double, double, double, double, double>())
-        .def(py::init<double, double, double, double, double, double, double, bool>())
         .def("get_real", &Model::get_real)
         .def("update_meas", &Model::update_meas)
         .def("set_map", &Model::set_map)
         .def("update", &Model::update);
+
+    py::class_<PlaneModel>(m, "PlaneModel")
+        .def(py::init<double, double, double, double, double, double, double>())
+        .def("get_real", &PlaneModel::get_real)
+        .def("update_meas", &PlaneModel::update_meas)
+        .def("set_map", &PlaneModel::set_map)
+        .def("update", &PlaneModel::update);
 
     // py::class_<Model::Measurment>(m, "Model.Measurment")
     //     .def("randomize",&Model::Measurment::randomize)

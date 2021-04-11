@@ -22,14 +22,31 @@ grid = pnoise(2**10,2**10,2**7)
 print('minmax =',grid.max(),grid.min())
 
 mapa = pf.HeightMap(grid)
+# # print(grid.shape)
+# plt.subplot(121)
+# plt.imshow(grid)
+# plt.plot([368,],[368,],'.r')
+# plt.subplot(122)
+
+# meas = grid[368,368]
+# print('real = ', meas)
+
+# for x in range(1024):
+#     for y in range(1024):
+#         grid[x,y] = mapa.get_meas_prob(meas,x,y,0.0)
+
+# plt.imshow(grid)
+# plt.plot([368,],[368,],'.r')
+# plt.show()
 
 
-fir = pf.ParticleFilter()
+
+fir = pf.PlaneParticleFilter()
 
 pos = np.array(grid.shape)/3
 ori = np.pi/4
-vel = 1
-model = pf.Model(*pos,ori,vel,1.5*vel+0.01, .01,.03, False)
+vel = 2
+model = pf.PlaneModel(*pos,ori,vel,1.5*vel+1, .01,0.03)
 model.set_map(mapa)
 
 dori = -np.pi/30
@@ -70,10 +87,11 @@ def iter(i):
         # break;
         return False
 
-    dori = 0
+    dori = 0.0
 
-    model.update_meas(0.0)
+    model.update_meas(0.0, 0.0)
     print(i,pos,ori,flush=True)
+    print(model.get_real())
 
     fir.update_weights()
 
@@ -89,9 +107,9 @@ def iter(i):
     # fir.resample(pf.RESAMPLE_TYPE.ROULETTE_WHEEL)
 
     prev = pos.copy()
-    print('PRE',dori,model.get_real())
+    # print('PRE',dori,model.get_real())
     model.update(dori,0.0)
-    print('POS',dori,model.get_real())
+    # print('POS',dori,model.get_real())
     fir.drift()
     pos[0], pos[1], ori, tmp = model.get_real()
 
@@ -107,11 +125,12 @@ def iter(i):
 
     plt.subplot(122)
     plt.cla()
+    # plt.hist(pop[:,3],bins=100)
     plt.hist(pop[:,2],bins=100)
 
-    if i%10:
-    #     return points,posline,estline
-        return True
+    # if i%10:
+    # #     return points,posline,estline
+    #     return True
     fig.canvas.draw()
     fig.canvas.flush_events()
     # return points,posline,estline
