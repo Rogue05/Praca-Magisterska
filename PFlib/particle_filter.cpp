@@ -187,9 +187,6 @@ struct Model{
     }
 
     void drift_state(robot_2d& state){
-        state.ori += rand_ori(gen);
-        state.vel += rand_vel(gen);
-
         if (map.get_meas(state.x,state.y,state.ori)<state.vel)
             state.ori += PI;
         state.x += cos(state.ori)*state.vel;
@@ -199,8 +196,14 @@ struct Model{
     void drift(py::array_t<robot_2d> a_pop){
         auto pop = a_pop.mutable_unchecked<1>();
         for(size_t i=0; i < pop.shape(0); ++i){
+            pop(i).ori += rand_ori(gen);
+            pop(i).vel += rand_vel(gen);
             drift_state(pop(i));
         }
+    }
+
+    double get_meas(robot_2d& state){
+        return map.get_meas(state.x,state.y,state.ori);
     }
 
     void update(py::array_t<robot_2d> a_pop, double dori, double dvel){
@@ -275,10 +278,44 @@ py::array roulette_wheel_resample(py::array a_pop, py::array_t<double> a_weights
     return a_new_pop;
 }
 
+py::array sus_resample(py::array a_pop, py::array_t<double> a_weights){
+    py::array a_new_pop = a_pop;
+    py::buffer_info buf = a_pop.request();
+    py::buffer_info new_buf = a_new_pop.request();
+
+    auto weights = a_weights.mutable_unchecked<1>();
+
+    std::default_random_engine gen;
+    
+
+    double sum = 0, wsum=0;
+    for (size_t i = 0; i < weights.shape(0); ++i) sum+=weights(i);
+    double step = sum/weights.shape(0);
+    double init = std::uniform_real_distribution<double>(0.,step)(gen);
+    size_t j = 0;
+
+    for (size_t i=0; i < buf.shape[0]; ++i){
+        double lw = init+step*i;
+        while(wsum<lw){
+            wsum+=weights(j);
+            j++;
+        }
+        // py::print("DUPA",i,j);
+        // if (j>=buf.shape[0]) py::print("DUPA",i,j,wsum,lw);
+        std::memcpy(
+            (char*)new_buf.ptr + i*buf.strides[0],
+            (char*)buf.ptr + (j-1)*buf.strides[0],
+            buf.strides[0]);
+    }
+
+    return a_new_pop;
+}
+
 PYBIND11_MODULE(PFlib, m){
     m.doc() = "particle filter lib";
 
     m.def("roulette_wheel_resample",roulette_wheel_resample);
+    m.def("sus_resample",sus_resample);
 
     py::class_<robot_2d>(m,"robot_2d")
         .def(py::init<>())
@@ -294,6 +331,7 @@ PYBIND11_MODULE(PFlib, m){
         .def("get_random_pop", &Model::get_random_pop)
         .def("drift_state",&Model::drift_state)
         .def("drift",&Model::drift)
+        .def("get_meas",&Model::get_meas)
         .def("update_weights",&Model::update_weights)
         .def("get_weights",&Model::get_weights)
         .def("as_array",&Model::as_array);
