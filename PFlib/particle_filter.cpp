@@ -234,6 +234,21 @@ struct Model{
         }
     }
 
+    // std::vector<double> update_weights(
+    //     double real, std::vector<robot_2d> pop,
+    //     std::vector<double> weights){
+        
+    //     double sum = 0.0;
+    //     for(size_t i=0; i < pop.size(); ++i){
+    //         weights[i] = weights[i]*map.get_meas_prob(real, pop[i].x, pop[i].y, pop[i].ori);
+    //         sum += weights[i];
+    //     }
+    //     for(size_t i=0; i < pop.size(); ++i){
+    //         weights[i] /= sum;
+    //     }
+    //     return weights;
+    // }
+
     py::array_t<double> update_weights(
         double real, py::array_t<robot_2d> a_pop,
         py::array_t<double> a_weights){
@@ -299,10 +314,35 @@ py::array roulette_wheel_resample(py::array a_pop, py::array_t<double> a_weights
     return a_new_pop;
 }
 
-py::array sus_resample(py::array a_pop, py::array_t<double> a_weights){
-    py::array a_new_pop(a_pop);
+// std::vector<robot_2d> sus_resample(
+//     std::vector<robot_2d> pop, std::vector<double> weights){
+    
+//     std::vector<robot_2d> new_pop(pop.size());
 
+//     std::default_random_engine gen;
+    
+//     double sum = 0, wsum=weights[0];
+//     for (size_t i = 0; i < weights.size(); ++i) sum+=weights[i];
+//     double step = sum/weights.size();
+//     double init = std::uniform_real_distribution<double>(0.,step)(gen);
+//     size_t j = 0;
+
+//     for (size_t i=0; i < pop.size(); ++i){
+//         double lw = init+step*i;
+//         while(wsum<lw){
+//             j++;
+//             wsum+=weights[j];
+//         }
+//         new_pop[i] = pop[j];
+//     }
+
+//     return new_pop;
+// }
+
+py::array sus_resample(py::array a_pop, py::array_t<double> a_weights){
     py::buffer_info buf = a_pop.request();
+
+    py::array a_new_pop(pybind11::dtype(buf), buf.shape, buf.strides, nullptr);
     py::buffer_info new_buf = a_new_pop.request();
 
     auto weights = a_weights.mutable_unchecked<1>();
@@ -316,33 +356,16 @@ py::array sus_resample(py::array a_pop, py::array_t<double> a_weights){
     double init = std::uniform_real_distribution<double>(0.,step)(gen);
     size_t j = 0;
 
-
-    // for (size_t i=0; i < buf.shape[0]; ++i){
-    //     py::print("+++",((robot_2d*)((char*)buf.ptr + i*buf.strides[0]))->x);
-    // }
-
     for (size_t i=0; i < buf.shape[0]; ++i){
         double lw = init+step*i;
         while(wsum<lw){
-        // while(tmp<lw){
             j++;
             wsum+=weights(j);
-            // tmp+=weights(j);
-            // py::print("ADD",i,j,wsum,tmp,weights(j));
-            // py::print("ADD", j, weights(j), wsum);
         }
-        // if (j>=buf.shape[0]) py::print("DUPA",i,j,wsum,lw);
-        py::print("ADD",i,j,wsum,weights(i));
-
-
         std::memcpy(
             (char*)new_buf.ptr + i*buf.strides[0],
             (char*)buf.ptr + j*buf.strides[0],
             buf.strides[0]);
-
-        py::print("---",j,
-            ((robot_2d*)((char*)new_buf.ptr + i*buf.strides[0]))->x,
-            ((robot_2d*)((char*)new_buf.ptr + j*buf.strides[0]))->x);
     }
 
     return a_new_pop;
