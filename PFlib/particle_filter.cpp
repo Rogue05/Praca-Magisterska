@@ -129,9 +129,14 @@ public:
 
     double get_meas_prob(double real, double x, double y, double ori){
         double meas = get_meas(x,y,ori);
-        double sig = (double)width*sqrt(2)/3;
+        // double sig = (double)width*sqrt(2)/3;
+        double sig = (double)width*sqrt(2)/30;
+        // double sig = (double)width*sqrt(2)/18;
         double p = (meas-real)/sig;
         return exp(-p*p/2)/sig/sqrt(PI2);
+        // return 2*(double)width-meas;
+        // py::print("     ",x,meas,"        ",y,ori);
+        // return meas;
     }
 
     bool is_valid(double x, double y){
@@ -186,19 +191,34 @@ struct Model{
         return ret;
     }
 
-    void drift_state(robot_2d& state){
+    py::array_t<robot_2d> get_linear_pop(size_t N){
+        auto ret = py::array_t<robot_2d>(N);
+        py::buffer_info buf = ret.request();
+        auto ptr = static_cast<robot_2d*>(buf.ptr);
+        
+        for(size_t i=1; i < N-1; ++i){
+            ptr[i] = robot_2d((double)i, (double)N/2, 0.0, 0.0);
+            // py::print((double)i, ptr[i].x, ptr[i].y);
+            // map.set_random_pos(ptr[i].x, ptr[i].y);
+        }
+        return ret;
+    }
+
+    void drift_state(robot_2d& state, double dori, double dvel){
+        state.vel += dvel;
+        state.ori += dori;
         if (map.get_meas(state.x,state.y,state.ori)<state.vel)
             state.ori += PI;
         state.x += cos(state.ori)*state.vel;
         state.y += sin(state.ori)*state.vel;
     }
 
-    void drift(py::array_t<robot_2d> a_pop){
+    void drift(py::array_t<robot_2d> a_pop, double dori, double dvel){
         auto pop = a_pop.mutable_unchecked<1>();
         for(size_t i=0; i < pop.shape(0); ++i){
             pop(i).ori += rand_ori(gen);
             pop(i).vel += rand_vel(gen);
-            drift_state(pop(i));
+            drift_state(pop(i), dori, dvel);
         }
     }
 
@@ -225,6 +245,7 @@ struct Model{
         
         double sum = 0.0;
         for(size_t i=0; i < pop.shape(0); ++i){
+            // py::print(i);
             ret(i) = weights(i)*map.get_meas_prob(real, pop(i).x, pop(i).y, pop(i).ori);
             sum += ret(i);
         }
@@ -279,7 +300,8 @@ py::array roulette_wheel_resample(py::array a_pop, py::array_t<double> a_weights
 }
 
 py::array sus_resample(py::array a_pop, py::array_t<double> a_weights){
-    py::array a_new_pop = a_pop;
+    py::array a_new_pop(a_pop);
+
     py::buffer_info buf = a_pop.request();
     py::buffer_info new_buf = a_new_pop.request();
 
@@ -288,24 +310,39 @@ py::array sus_resample(py::array a_pop, py::array_t<double> a_weights){
     std::default_random_engine gen;
     
 
-    double sum = 0, wsum=0;
+    double sum = 0, wsum=weights(0);
     for (size_t i = 0; i < weights.shape(0); ++i) sum+=weights(i);
     double step = sum/weights.shape(0);
     double init = std::uniform_real_distribution<double>(0.,step)(gen);
     size_t j = 0;
 
+
+    // for (size_t i=0; i < buf.shape[0]; ++i){
+    //     py::print("+++",((robot_2d*)((char*)buf.ptr + i*buf.strides[0]))->x);
+    // }
+
     for (size_t i=0; i < buf.shape[0]; ++i){
         double lw = init+step*i;
         while(wsum<lw){
-            wsum+=weights(j);
+        // while(tmp<lw){
             j++;
+            wsum+=weights(j);
+            // tmp+=weights(j);
+            // py::print("ADD",i,j,wsum,tmp,weights(j));
+            // py::print("ADD", j, weights(j), wsum);
         }
-        // py::print("DUPA",i,j);
         // if (j>=buf.shape[0]) py::print("DUPA",i,j,wsum,lw);
+        py::print("ADD",i,j,wsum,weights(i));
+
+
         std::memcpy(
             (char*)new_buf.ptr + i*buf.strides[0],
-            (char*)buf.ptr + (j-1)*buf.strides[0],
+            (char*)buf.ptr + j*buf.strides[0],
             buf.strides[0]);
+
+        py::print("---",j,
+            ((robot_2d*)((char*)new_buf.ptr + i*buf.strides[0]))->x,
+            ((robot_2d*)((char*)new_buf.ptr + j*buf.strides[0]))->x);
     }
 
     return a_new_pop;
@@ -324,11 +361,15 @@ PYBIND11_MODULE(PFlib, m){
         .def_readwrite("y", &robot_2d::y)
         .def_readwrite("ori", &robot_2d::ori)
         .def_readwrite("vel", &robot_2d::vel);
+
+
     PYBIND11_NUMPY_DTYPE(robot_2d, x, y, ori, vel);
+
 
     py::class_<Model>(m, "Model")
         .def(py::init<PrimitiveMap&,double,double>())
         .def("get_random_pop", &Model::get_random_pop)
+        .def("get_linear_pop", &Model::get_linear_pop)
         .def("drift_state",&Model::drift_state)
         .def("drift",&Model::drift)
         .def("get_meas",&Model::get_meas)
