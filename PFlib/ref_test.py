@@ -6,7 +6,7 @@ import PFlib as pf
 
 map_size = 1000
 
-pop_size = 10000
+pop_size = 100000
 d_vel = 0.2
 d_ori = 0.3
 
@@ -44,7 +44,7 @@ fig = plt.figure(figsize=(7,7))
 plt.imshow(np.array(mapa.get_grid()).T, cmap='gray')
 real_line, = plt.plot([],[],'.r',ms=15)
 pop_line, = plt.plot(*model.as_array(pop),'.b',alpha=0.01)
-# estline, = plt.plot([],[],'.y',ms=15)
+est_line, = plt.plot([],[],'.y',ms=15)
 
 plt.xlim([-1,1001])
 plt.ylim([-1,1001])
@@ -59,23 +59,26 @@ for i in range(1000):
 
 	model.drift_state(real_state, 0.1, 0.0)
 	model.drift(pop, 0.1, 0.0)
-	print(i,real_state.x,real_state.y,real_state.ori,real_state.vel)
+
+	print('      r ',i,real_state.x,real_state.y,real_state.ori,real_state.vel)
 
 	meas = model.get_meas(real_state)
 	weights = model.update_weights(meas, pop, weights)
-	print(weights.max())
+
+	est_state = model.get_est(pop,weights)
+	print('      e' ,i,est_state.x,est_state.y,est_state.ori,est_state.vel)	
 
 	effN = 1/(weights**2).sum()
 
 	if effN < 0.8*pop_size:
 		print('resample',effN)
-		# pop = pf.roulette_wheel_resample(pop, weights)
-		pop = pf.sus_resample(pop, weights)
-		# pop = np.random.choice(pop,size=pop_size,p=weights,replace=True)
+		pop = pf.roulette_wheel_resample(pop, weights)
+		# pop = pf.sus_resample(pop, weights)
 		weights = model.get_weights(pop_size)
 
 	pop_line.set_data(*model.as_array(pop))
 	real_line.set_data(real_state.x,real_state.y)
+	est_line.set_data(est_state.x,est_state.y)
 
 	# if i % 10 != 0:
 	# 	continue
