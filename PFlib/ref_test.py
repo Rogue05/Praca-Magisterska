@@ -6,7 +6,7 @@ import PFlib as pf
 
 map_size = 1000
 
-pop_size = 100000
+pop_size = 10000
 d_vel = 0.2
 d_ori = 0.3
 
