@@ -16,18 +16,12 @@ real_state = pf.robot_2d(100, 100, np.pi/4, 10)
 # grid = pnoise(2**10,2**10,2**7)
 # print('minmax =',grid.max(),grid.min())
 
-# from scipy.ndimage.filters import gaussian_filter
 grid = np.load('map.npy')
 grid /= grid.max()
-# grid = gaussian_filter(grid, sigma=100)
 print('minmax =',grid.max(),grid.min())
-
-# p = 1000
-# grid = grid[p:p+300,p:p+300]
 
 mapa = pf.HeightMap(grid)
 
-# model = pf.Plane_Model(mapa,d_ori,d_vel)
 model = pf.Model(mapa,d_ori,d_vel)
 pop = model.get_random_pop(pop_size)
 weights = model.get_weights(pop_size)
@@ -85,26 +79,3 @@ for i in range(1000):
 		continue
 	fig.canvas.draw()
 	fig.canvas.flush_events()
-
-
-
-
-# grid = np.load('map.npy')
-# grid /= grid.max()
-
-# x,y = np.meshgrid(np.linspace(0,1,1000),np.linspace(0,1,1000))
-# grid = y
-
-# mapa = pf.HeightMap(grid)
-# model = pf.Model(mapa,d_ori,d_vel)
-# pop = model.get_linear_pop(grid.shape[0])
-
-# real_state = pf.robot_2d(500, grid.shape[1]/2, np.pi/4, 10)
-
-# meas = meas = model.get_meas(real_state)
-# weights = model.update_weights(meas, pop, np.ones((len(pop),)))
-
-# # xs = [e.x for e in pop]
-
-# plt.plot(weights)
-# plt.show()
