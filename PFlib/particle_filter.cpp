@@ -322,29 +322,6 @@ struct Model{
         }
     }
 
-    robot_2d get_est(py::array_t<robot_2d> a_pop,
-        py::array_t<double> a_weights){
-        auto pop = a_pop.mutable_unchecked<1>();
-        auto weights = a_weights.mutable_unchecked<1>();
-
-        double x=0,y=0,orix=0,oriy=0,vel=0;
-        for(size_t i = 0; i<pop.shape(0);++i){
-            orix+=cos(pop(i).ori)*weights(i);
-            oriy+=sin(pop(i).ori)*weights(i);
-            x+=pop(i).x*weights(i);
-            y+=pop(i).y*weights(i);
-            vel+=pop(i).vel*weights(i);
-        }
-        double sum = 0;
-        for(size_t i = 0; i<weights.shape(0);++i) sum+=weights(i);
-        x /= sum;
-        y /= sum;
-        orix /= sum;
-        oriy /= sum;
-        vel /= sum;
-        return robot_2d(x,y,atan2(oriy,orix),vel);
-    }
-
     py::array_t<double> update_weights(
         double real, py::array_t<robot_2d> a_pop,
         py::array_t<double> a_weights){
@@ -365,30 +342,53 @@ struct Model{
         }
         return a_ret;
     }
-
-    py::array_t<double> get_weights(size_t N){
-        auto a_ret = py::array_t<double>(N);
-        auto ret = a_ret.mutable_unchecked<1>();
-        
-        const double w = 1.0/N;
-        for(size_t i=0; i < ret.shape(0); ++i){
-            ret(i) = w;
-        }
-        return a_ret;
-    }
-
-    py::array_t<double> as_array(py::array_t<robot_2d> a_pop){
-        auto pop = a_pop.mutable_unchecked<1>();
-        std::vector<std::vector<double>> ret(2);
-
-        for(size_t i=0; i < pop.shape(0); ++i){
-            ret[0].push_back(pop(i).x);
-            ret[1].push_back(pop(i).y);
-        }
-
-        return py::cast(ret);
-    }
 };
+
+py::array_t<double> get_uniform_weights(size_t N){
+    auto a_ret = py::array_t<double>(N);
+    auto ret = a_ret.mutable_unchecked<1>();
+    
+    const double w = 1.0/N;
+    for(size_t i=0; i < ret.shape(0); ++i){
+        ret(i) = w;
+    }
+    return a_ret;
+}
+
+robot_2d get_est(py::array_t<robot_2d> a_pop,
+    py::array_t<double> a_weights){
+    auto pop = a_pop.mutable_unchecked<1>();
+    auto weights = a_weights.mutable_unchecked<1>();
+
+    double x=0,y=0,orix=0,oriy=0,vel=0;
+    for(size_t i = 0; i<pop.shape(0);++i){
+        orix+=cos(pop(i).ori)*weights(i);
+        oriy+=sin(pop(i).ori)*weights(i);
+        x+=pop(i).x*weights(i);
+        y+=pop(i).y*weights(i);
+        vel+=pop(i).vel*weights(i);
+    }
+    double sum = 0;
+    for(size_t i = 0; i<weights.shape(0);++i) sum+=weights(i);
+    x /= sum;
+    y /= sum;
+    orix /= sum;
+    oriy /= sum;
+    vel /= sum;
+    return robot_2d(x,y,atan2(oriy,orix),vel);
+}
+
+py::array_t<double> as_array(py::array_t<robot_2d> a_pop){
+    auto pop = a_pop.mutable_unchecked<1>();
+    std::vector<std::vector<double>> ret(2);
+
+    for(size_t i=0; i < pop.shape(0); ++i){
+        ret[0].push_back(pop(i).x);
+        ret[1].push_back(pop(i).y);
+    }
+
+    return py::cast(ret);
+}
 
 py::array roulette_wheel_resample(py::array a_pop, py::array_t<double> a_weights){
     py::array a_new_pop = a_pop;
@@ -447,6 +447,9 @@ PYBIND11_MODULE(PFlib, m){
 
     m.def("roulette_wheel_resample",roulette_wheel_resample);
     m.def("sus_resample",sus_resample);
+    m.def("as_array",as_array);
+    m.def("get_uniform_weights",get_uniform_weights);
+    m.def("get_est",get_est);
 
     py::class_<robot_2d>(m,"robot_2d")
         .def(py::init<>())
@@ -455,8 +458,6 @@ PYBIND11_MODULE(PFlib, m){
         .def_readwrite("y", &robot_2d::y)
         .def_readwrite("ori", &robot_2d::ori)
         .def_readwrite("vel", &robot_2d::vel);
-
-
     PYBIND11_NUMPY_DTYPE(robot_2d, x, y, ori, vel);
 
     py::class_<Model>(m, "Model")
@@ -466,10 +467,7 @@ PYBIND11_MODULE(PFlib, m){
         .def("drift_state",&Model::drift_state)
         .def("drift",&Model::drift)
         .def("get_meas",&Model::get_meas)
-        .def("update_weights",&Model::update_weights)
-        .def("get_weights",&Model::get_weights)
-        .def("as_array",&Model::as_array)
-        .def("get_est",&Model::get_est);
+        .def("update_weights",&Model::update_weights);
 
     py::class_<Map, std::shared_ptr<Map>>(m, "Map");
 

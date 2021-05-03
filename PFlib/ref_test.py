@@ -24,7 +24,7 @@ mapa.add_circle(800,400,60)
 
 model = pf.Model(mapa,d_ori,d_vel)
 pop = model.get_random_pop(pop_size)
-weights = model.get_weights(pop_size)
+weights = pf.get_uniform_weights(pop_size)
 
 #================================
 
@@ -43,7 +43,7 @@ plt.ion()
 fig = plt.figure(figsize=(7,7))
 plt.imshow(np.array(mapa.get_grid()).T, cmap='gray')
 real_line, = plt.plot([],[],'.r',ms=15)
-pop_line, = plt.plot(*model.as_array(pop),'.b',alpha=0.01)
+pop_line, = plt.plot(*pf.as_array(pop),'.b',alpha=0.01)
 est_line, = plt.plot([],[],'.y',ms=15)
 
 plt.xlim([-1,1001])
@@ -65,7 +65,7 @@ for i in range(1000):
 	meas = model.get_meas(real_state)
 	weights = model.update_weights(meas, pop, weights)
 
-	est_state = model.get_est(pop,weights)
+	est_state = pf.get_est(pop,weights)
 	print('      e' ,i,est_state.x,est_state.y,est_state.ori,est_state.vel)	
 
 	effN = 1/(weights**2).sum()
@@ -74,9 +74,9 @@ for i in range(1000):
 		print('resample',effN)
 		pop = pf.roulette_wheel_resample(pop, weights)
 		# pop = pf.sus_resample(pop, weights)
-		weights = model.get_weights(pop_size)
+		weights = pf.get_uniform_weights(pop_size)
 
-	pop_line.set_data(*model.as_array(pop))
+	pop_line.set_data(*pf.as_array(pop))
 	real_line.set_data(real_state.x,real_state.y)
 	est_line.set_data(est_state.x,est_state.y)
 
