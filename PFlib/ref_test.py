@@ -22,71 +22,102 @@ mapa.add_circle(200,0,300)
 mapa.add_circle(200,700,100)
 mapa.add_circle(800,400,60)
 
-model = pf.Model(mapa,d_ori,d_vel)
-pop = model.get_random_pop(pop_size)
+# model = pf.Model(mapa)
+pop = pf.get_random_pop(mapa,pop_size)
 weights = pf.get_uniform_weights(pop_size)
 
 #================================
 
 
-# model.drift_state(real_state)
-# model.drift(pop)
-# meas = model.get_meas(real_state)
-# weights = model.update_weights(meas, pop, weights)
+# # model.drift_state(real_state)
+# # model.drift(pop)
+# # meas = model.get_meas(real_state)
+# # weights = model.update_weights(meas, pop, weights)
 
-# print(pop)
-# pop = pf.sus_resample(pop, weights)
-# print(weights)
-# print(pop)
+# # print(pop)
+# # pop = pf.sus_resample(pop, weights)
+# # print(weights)
+# # print(pop)
 
-plt.ion()
-fig = plt.figure(figsize=(7,7))
-plt.imshow(np.array(mapa.get_grid()).T, cmap='gray')
-real_line, = plt.plot([],[],'.r',ms=15)
-pop_line, = plt.plot(*pf.as_array(pop),'.b',alpha=0.01)
-est_line, = plt.plot([],[],'.y',ms=15)
+# plt.ion()
+# fig = plt.figure(figsize=(7,7))
+# plt.imshow(np.array(mapa.get_grid()).T, cmap='gray')
+# real_line, = plt.plot([],[],'.r',ms=15)
+# pop_line, = plt.plot(*pf.as_array(pop),'.b',alpha=0.01)
+# est_line, = plt.plot([],[],'.y',ms=15)
 
-plt.xlim([-1,1001])
-plt.ylim([-1,1001])
-plt.axis('equal')
-plt.show()
-fig.canvas.draw()
-fig.canvas.flush_events()
+# plt.xlim([-1,1001])
+# plt.ylim([-1,1001])
+# plt.axis('equal')
+# plt.show()
+# fig.canvas.draw()
+# fig.canvas.flush_events()
+
+# Gen92
+# Hau11
+
+diffx = []
+diffy = []
+
+popss = [pop_size,]
+oriss = [real_state.ori,]
 
 for i in range(1000):
-	if not plt.fignum_exists(fig.number):
-		break
+	# if not plt.fignum_exists(fig.number):
+	# 	break
 
-	model.drift_state(real_state, 0.1, 0.0)
-	model.drift(pop, 0.1, 0.0)
+	pf.drift_state(mapa, real_state, 0.1, 0.0)
+	pf.drift_pop(mapa, pop, 0.1, 0.0, d_ori, d_vel)
 
-	print('      r ',i,real_state.x,real_state.y,real_state.ori,real_state.vel)
+	# pf.regularize(pop, 0.1, 0.0, 0.0)
 
-	meas = model.get_meas(real_state)
-	weights = model.update_weights(meas, pop, weights)
+	# print('      r ',i,real_state.x,real_state.y,real_state.ori,real_state.vel)
+
+	meas = mapa.get_meas(real_state.x, real_state.y, real_state.ori)
+	weights = pf.update_weights(mapa,meas, pop, weights)
 
 	est_state = pf.get_est(pop,weights)
-	print('      e' ,i,est_state.x,est_state.y,est_state.ori,est_state.vel)	
+	# print('      e' ,i,est_state.x,est_state.y,est_state.ori,est_state.vel)	
+
+	if i > 100:
+		diffx.append(real_state.x-est_state.x)
+		diffy.append(real_state.y-est_state.y)
 
 	effN = 1/(weights**2).sum()
 
 	if effN < 0.8*pop_size:
-		print('resample',effN)
-		pop = pf.roulette_wheel_resample(pop, weights)
-		# pop = pf.sus_resample(pop, weights)
+		print(i,'resample',pop_size,effN,flush=True)
+		# exit()
+		# pop = pf.roulette_wheel_resample(pop, weights)
+		# print(len(pop))
+		alpha = 100
+		# # print("get N",flush=True)
+		# pop_size = pf.get_new_N(mapa, pop, weights, meas, alpha)
+		# print('got new',flush=True)
+		popss.append(pop_size)
+		oriss.append(real_state.ori)
+		# # print("got N",flush=True)
+		# # pop = pf.sus_resample(pop, weights)
+		# pop = pf.roulette_wheel_resample(pop, weights, pop_size)
+		pop = pf.sus_resample(pop, weights, pop_size)
+		# print('resampled',flush=True)
 		weights = pf.get_uniform_weights(pop_size)
 
-	pop_line.set_data(*pf.as_array(pop))
-	real_line.set_data(real_state.x,real_state.y)
-	est_line.set_data(est_state.x,est_state.y)
+	# pop_line.set_data(*pf.as_array(pop))
+	# real_line.set_data(real_state.x,real_state.y)
+	# est_line.set_data(est_state.x,est_state.y)
 
-	# if i % 10 != 0:
+	# if i % 10 != 1:
 	# 	continue
-	fig.canvas.draw()
-	fig.canvas.flush_events()
+	# fig.canvas.draw()
+	# fig.canvas.flush_events()
 
 
-
+plt.plot(diffx,diffy,'.')
+plt.axis('equal')
+# plt.figure()
+# plt.polar(oriss,popss,'.')
+plt.show()
 
 
 # pop = model.get_linear_pop(map_size) # tak, ma byc map_size

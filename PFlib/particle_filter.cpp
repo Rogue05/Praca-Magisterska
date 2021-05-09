@@ -6,8 +6,9 @@
 #include <vector>
 #include <memory>
 #include <cmath>
-
 #include <iostream>
+
+#include <boost/numeric/interval.hpp>
 
 using namespace std;
 namespace py = pybind11;
@@ -252,97 +253,86 @@ struct robot_2d{
 #define MAGIC_VELOCITY_MIN 5
 #define MAGIC_VELOCITY_MAX 15
 
-struct Model{
+py::array_t<robot_2d> get_random_pop(
+    std::shared_ptr<Map> map,size_t N){
+    auto ret = py::array_t<robot_2d>(N);
+    py::buffer_info buf = ret.request();
+    auto ptr = static_cast<robot_2d*>(buf.ptr);
+    
     std::default_random_engine gen;
-    std::uniform_real_distribution<double> rand_ori, rand_vel;
-
-    std::shared_ptr<Map> map;
-
-    Model(std::shared_ptr<Map> map_, double do_, double dv_)
-        :map(map_), rand_ori(-do_,do_), rand_vel(-dv_,dv_){};
-
-    py::array_t<robot_2d> get_random_pop(size_t N){
-        auto ret = py::array_t<robot_2d>(N);
-        py::buffer_info buf = ret.request();
-        auto ptr = static_cast<robot_2d*>(buf.ptr);
-        
-        std::uniform_real_distribution<double>
-            ro(0.0,PI2), vo(MAGIC_VELOCITY_MIN, MAGIC_VELOCITY_MAX);
-        for(size_t i=0; i < N; ++i){
-            ptr[i] = {0.0, 0.0, ro(gen), vo(gen)};
-            map->set_random_pos(ptr[i].x, ptr[i].y);
-        }
-        return ret;
+    std::uniform_real_distribution<double>
+        ro(0.0,PI2), vo(MAGIC_VELOCITY_MIN, MAGIC_VELOCITY_MAX);
+    for(size_t i=0; i < N; ++i){
+        ptr[i] = {0.0, 0.0, ro(gen), vo(gen)};
+        map->set_random_pos(ptr[i].x, ptr[i].y);
     }
+    return ret;
+}
 
-    py::array_t<robot_2d> get_linear_pop(size_t N){
-        auto ret = py::array_t<robot_2d>(N);
-        py::buffer_info buf = ret.request();
-        auto ptr = static_cast<robot_2d*>(buf.ptr);
-        
-        for(size_t i=1; i < N-1; ++i){
-            ptr[i] = robot_2d((double)i, (double)N/2, 0.0, 0.0);
-        }
-        return ret;
+py::array_t<robot_2d> get_linear_pop(size_t N){
+    auto ret = py::array_t<robot_2d>(N);
+    py::buffer_info buf = ret.request();
+    auto ptr = static_cast<robot_2d*>(buf.ptr);
+    
+    for(size_t i=1; i < N-1; ++i){
+        ptr[i] = robot_2d((double)i, (double)N/2, 0.0, 0.0);
     }
+    return ret;
+}
 
-    void drift_state(robot_2d& state, double dori, double dvel){
-        state.vel += dvel;
-        state.ori += dori;
+void drift_state(std::shared_ptr<Map> map, 
+    robot_2d& state, double dori, double dvel){
+    state.vel += dvel;
+    state.ori += dori;
 
-        double tmpx = state.x + cos(state.ori)*state.vel;
-        double tmpy = state.y + sin(state.ori)*state.vel;
+    double tmpx = state.x + cos(state.ori)*state.vel;
+    double tmpy = state.y + sin(state.ori)*state.vel;
 
-        if (!map->is_valid(tmpx,tmpy))
-            state.ori += PI;
-        // if (map.get_meas(state.x,state.y,state.ori)<state.vel)
-        //     state.ori += PI;
-        state.x += cos(state.ori)*state.vel;
-        state.y += sin(state.ori)*state.vel;
+    if (!map->is_valid(tmpx,tmpy))
+        state.ori += PI;
+    // if (map.get_meas(state.x,state.y,state.ori)<state.vel)
+    //     state.ori += PI;
+    state.x += cos(state.ori)*state.vel;
+    state.y += sin(state.ori)*state.vel;
+}
+
+void drift_pop(std::shared_ptr<Map> map,
+    py::array_t<robot_2d> a_pop, double dori, double dvel,
+    double var_ori, double var_vel){
+    auto pop = a_pop.mutable_unchecked<1>();
+
+    std::default_random_engine gen;
+    std::uniform_real_distribution<double> rand_ori(-var_ori,var_ori), 
+                                            rand_vel(-var_vel,var_vel);
+
+    for(size_t i=0; i < pop.shape(0); ++i){
+        pop(i).ori += rand_ori(gen);
+        pop(i).vel += rand_vel(gen);
+        drift_state(map, pop(i), dori, dvel);
     }
+}
 
-    void drift(py::array_t<robot_2d> a_pop, double dori, double dvel){
-        auto pop = a_pop.mutable_unchecked<1>();
-        for(size_t i=0; i < pop.shape(0); ++i){
-            pop(i).ori += rand_ori(gen);
-            pop(i).vel += rand_vel(gen);
-            drift_state(pop(i), dori, dvel);
-        }
+py::array_t<double> update_weights(
+    std::shared_ptr<Map> map,
+    double real, py::array_t<robot_2d> a_pop,
+    py::array_t<double> a_weights){
+
+    auto pop = a_pop.mutable_unchecked<1>();
+    auto a_ret = py::array_t<double>(pop.shape(0));
+    auto ret = a_ret.mutable_unchecked<1>();
+    auto weights = a_weights.mutable_unchecked<1>();
+    
+    double sum = 0.0;
+    for(size_t i=0; i < pop.shape(0); ++i){
+        // py::print(i);
+        ret(i) = weights(i)*map->get_meas_prob(real, pop(i).x, pop(i).y, pop(i).ori);
+        sum += ret(i);
     }
-
-    double get_meas(robot_2d& state){
-        return map->get_meas(state.x,state.y,state.ori);
+    for(size_t i=0; i < pop.shape(0); ++i){
+        ret(i) /= sum;
     }
-
-    void update(py::array_t<robot_2d> a_pop, double dori, double dvel){
-        auto pop = a_pop.mutable_unchecked<1>();
-        for(size_t i=0; i < pop.shape(0); ++i){
-            pop(i).ori += dori;
-            pop(i).vel += dvel;
-        }
-    }
-
-    py::array_t<double> update_weights(
-        double real, py::array_t<robot_2d> a_pop,
-        py::array_t<double> a_weights){
-
-        auto pop = a_pop.mutable_unchecked<1>();
-        auto a_ret = py::array_t<double>(pop.shape(0));
-        auto ret = a_ret.mutable_unchecked<1>();
-        auto weights = a_weights.mutable_unchecked<1>();
-        
-        double sum = 0.0;
-        for(size_t i=0; i < pop.shape(0); ++i){
-            // py::print(i);
-            ret(i) = weights(i)*map->get_meas_prob(real, pop(i).x, pop(i).y, pop(i).ori);
-            sum += ret(i);
-        }
-        for(size_t i=0; i < pop.shape(0); ++i){
-            ret(i) /= sum;
-        }
-        return a_ret;
-    }
-};
+    return a_ret;
+}
 
 py::array_t<double> get_uniform_weights(size_t N){
     auto a_ret = py::array_t<double>(N);
@@ -390,17 +380,114 @@ py::array_t<double> as_array(py::array_t<robot_2d> a_pop){
     return py::cast(ret);
 }
 
-py::array roulette_wheel_resample(py::array a_pop, py::array_t<double> a_weights){
-    py::array a_new_pop = a_pop;
+// #include <list>
+#include <functional>
+
+double get_dist(robot_2d& r1, robot_2d& r2){
+    // return std::sqrt(
+    //     std::pow(r1.x-r2.x,2)+
+    //     std::pow(r1.y-r2.y,2));
+    return std::sqrt(
+        std::pow(r1.x-r2.x,2)+
+        std::pow(r1.y-r2.y,2)+
+        std::pow(r1.ori-r2.ori,2)+
+        std::pow(r1.vel-r2.vel,2));
+}
+
+size_t get_new_N(
+// std::vector<double> get_new_N(
+    std::shared_ptr<Map> map,
+    py::array_t<robot_2d> a_pop,
+    py::array_t<double> a_weights,
+    double meas, double alpha){
+    auto pop = a_pop.mutable_unchecked<1>();
+    auto weights = a_weights.mutable_unchecked<1>();
+
+    // list<int> S;
+    std::vector<int> S;
+    for (int i = 0; i < pop.shape(0); ++i) S.push_back(i);
+    // double gamma = 1.0;
+
+    auto get_zeta = [&](){
+        double x=0,y=0,orix=0,oriy=0,vel=0;
+        for(size_t i = 0; i<S.size();++i){
+            orix+=cos(pop(S[i]).ori)*weights(S[i]);
+            oriy+=sin(pop(S[i]).ori)*weights(S[i]);
+            x+=pop(S[i]).x*weights(S[i]);
+            y+=pop(S[i]).y*weights(S[i]);
+            vel+=pop(S[i]).vel*weights(S[i]);
+        }
+        double sum = 0;
+        for(size_t i = 0; i<S.size();++i) sum+=weights(S[i]);
+        x /= sum;
+        y /= sum;
+        orix /= sum;
+        oriy /= sum;
+        vel /= sum;
+        return std::abs(map->get_meas(x,y,atan2(oriy,orix))-meas);
+    };
+
+    std::vector<std::pair<
+        std::function<bool(int,int)>,
+        double>> preds = {
+        {[&pop](int a, int b){return pop(a).x < pop(b).x;}, 0.1},
+        {[&pop](int a, int b){return pop(a).y < pop(b).y;}, 0.1},
+        {[&pop](int a, int b){return pop(a).ori < pop(b).ori;}, 0.1},
+        {[&pop](int a, int b){return pop(a).vel < pop(b).vel;}, 0.1},
+    };
+
+    std::vector<double> zeta;
+    // double alpha = 0.2;
+
+    for(auto pred:preds){
+        std::sort(S.begin(),S.end(),pred.first);
+        for (int i = 0; i < S.size() - 1; ++i)
+            if(get_dist(pop(S[i]),pop(S[i+1]))<pred.second){ // gamma -> second
+                if (weights(i)>weights(i+1)) S.erase(S.begin() + i + 1);
+                else S.erase(S.begin() + i);
+                i--;
+                zeta.push_back(get_zeta());
+            }
+        // py::print("size reduced to",S.size());
+        // py::print(zeta);
+    }
+
+    size_t Nmax = 10000, Nmin = 100, newN = 0;
+    // py::print(std::min_element(zeta.begin(), zeta.end()),
+    //     std::max_element(zeta.begin(), zeta.end()));
+    if (std::all_of(zeta.begin(), zeta.end(), [&alpha](double e){return e>alpha;}))
+        newN = std::uniform_int_distribution<int>(pop.shape(0),Nmax)(
+            std::default_random_engine());
+    else{
+        for(int i=0;i<zeta.size();++i) if(zeta[i]<alpha) newN = i;
+        newN = pop.shape(0)-newN;
+    }
+    if(newN < Nmin) newN = Nmin;
+    return newN;
+
+    // return zeta;
+}
+
+py::array roulette_wheel_resample(py::array a_pop, py::array_t<double> a_weights,
+                                    size_t new_pop_size = 0){
     py::buffer_info buf = a_pop.request();
-    py::buffer_info new_buf = a_new_pop.request();
+
+    // py::array a_new_pop = a_pop;
+    // py::buffer_info new_buf = a_new_pop.request();
 
     auto weights = a_weights.mutable_unchecked<1>();
 
     std::default_random_engine gen;
     std::discrete_distribution<int> dist(weights.data(0),weights.data(0)+weights.shape(0));
 
-    for(int i = 0; i < buf.shape[0]; ++i){
+    if (new_pop_size == 0) new_pop_size = buf.shape[0];
+
+    auto new_shape = buf.shape;
+    new_shape[0] = new_pop_size;
+    py::array a_new_pop(pybind11::dtype(buf), new_shape, buf.strides, nullptr);
+    py::buffer_info new_buf = a_new_pop.request();
+
+    for(int i = 0; i < new_pop_size; ++i){
         std::memcpy(
             (char*)new_buf.ptr+i*buf.strides[0],
             (char*)buf.ptr+dist(gen)*buf.strides[0],
@@ -410,24 +497,31 @@ py::array roulette_wheel_resample(py::array a_pop, py::array_t<double> a_weights
     return a_new_pop;
 }
 
-py::array sus_resample(py::array a_pop, py::array_t<double> a_weights){
+py::array sus_resample(py::array a_pop, py::array_t<double> a_weights,
+                        size_t new_pop_size = 0){
     py::buffer_info buf = a_pop.request();
 
-    py::array a_new_pop(pybind11::dtype(buf), buf.shape, buf.strides, nullptr);
-    py::buffer_info new_buf = a_new_pop.request();
+    // py::array a_new_pop(pybind11::dtype(buf), buf.shape, buf.strides, nullptr);
+    // py::buffer_info new_buf = a_new_pop.request();
 
     auto weights = a_weights.mutable_unchecked<1>();
 
     std::default_random_engine gen;
     
+    if (new_pop_size == 0) new_pop_size = buf.shape[0];
 
     double sum = 0, wsum=weights(0);
     for (size_t i = 0; i < weights.shape(0); ++i) sum+=weights(i);
-    double step = sum/weights.shape(0);
+    double step = sum/new_pop_size;
     double init = std::uniform_real_distribution<double>(0.,step)(gen);
     size_t j = 0;
 
-    for (size_t i=0; i < buf.shape[0]; ++i){
+    auto new_shape = buf.shape;
+    new_shape[0] = new_pop_size;
+    py::array a_new_pop(pybind11::dtype(buf), new_shape, buf.strides, nullptr);
+    py::buffer_info new_buf = a_new_pop.request();
+    // py::print(__func__,"flush"_a = true);
+    for (size_t i=0; i < new_pop_size; ++i){
         double lw = init+step*i;
         while(wsum<lw){
             j++;
@@ -442,14 +536,43 @@ py::array sus_resample(py::array a_pop, py::array_t<double> a_weights){
     return a_new_pop;
 }
 
+void regularize(py::array_t<robot_2d> a_pop,
+    double stdx, double stdori, double stdvel){
+    auto pop = a_pop.mutable_unchecked<1>();
+
+    std::default_random_engine gen1, gen2;
+    std::normal_distribution<double>
+        dx(.0, stdx), dori(.0, stdori), dvel(.0, stdvel);
+
+    for (size_t i=0; i < pop.shape(0); ++i){
+        pop(i).x += dx(gen1);
+        pop(i).y += dx(gen2);
+        pop(i).ori += dori(gen2);
+        pop(i).vel += dvel(gen2);
+    }
+}
+
 PYBIND11_MODULE(PFlib, m){
     m.doc() = "particle filter lib";
 
-    m.def("roulette_wheel_resample",roulette_wheel_resample);
-    m.def("sus_resample",sus_resample);
-    m.def("as_array",as_array);
-    m.def("get_uniform_weights",get_uniform_weights);
-    m.def("get_est",get_est);
+    m.def("roulette_wheel_resample", roulette_wheel_resample,
+        py::arg("pop"), py::arg("weights"), py::arg("weights") = 0);
+    m.def("sus_resample", sus_resample,
+        py::arg("pop"), py::arg("weights"), py::arg("weights") = 0);
+
+    m.def("as_array", as_array);
+    m.def("get_uniform_weights", get_uniform_weights);
+    m.def("get_est", get_est);
+    m.def("update_weights", update_weights);
+    m.def("drift_state", drift_state);
+    m.def("drift_pop", drift_pop);
+    m.def("get_random_pop", get_random_pop);
+    m.def("get_linear_pop", get_linear_pop);
+    m.def("get_new_N", get_new_N,
+        "Particle filtering with adaptive number of particles, doi=10.1109/AERO.2011.5747439");
+
+    m.def("regularize", regularize,
+        "actualy covered in drift");
 
     py::class_<robot_2d>(m,"robot_2d")
         .def(py::init<>())
@@ -460,25 +583,18 @@ PYBIND11_MODULE(PFlib, m){
         .def_readwrite("vel", &robot_2d::vel);
     PYBIND11_NUMPY_DTYPE(robot_2d, x, y, ori, vel);
 
-    py::class_<Model>(m, "Model")
-        .def(py::init<std::shared_ptr<Map>,double,double>())
-        .def("get_random_pop", &Model::get_random_pop)
-        .def("get_linear_pop", &Model::get_linear_pop)
-        .def("drift_state",&Model::drift_state)
-        .def("drift",&Model::drift)
-        .def("get_meas",&Model::get_meas)
-        .def("update_weights",&Model::update_weights);
-
     py::class_<Map, std::shared_ptr<Map>>(m, "Map");
 
     py::class_<PrimitiveMap, Map, std::shared_ptr<PrimitiveMap>>(m, "PrimitiveMap")
         .def(py::init(&PrimitiveMap::create))
         .def("get_grid", &PrimitiveMap::get_grid)
         .def("add_line", &PrimitiveMap::add_line)
-        .def("add_circle", &PrimitiveMap::add_circle);
+        .def("add_circle", &PrimitiveMap::add_circle)
+        .def("get_meas", py::vectorize(&PrimitiveMap::get_meas));
 
     py::class_<HeightMap, Map, std::shared_ptr<HeightMap>>(m, "HeightMap")
         .def(py::init(&HeightMap::create))
         .def("get_meas_prob", &HeightMap::get_meas_prob)
-        .def("get_grid", &HeightMap::get_grid);
+        .def("get_grid", &HeightMap::get_grid)
+        .def("get_meas", py::vectorize(&HeightMap::get_meas));
 }

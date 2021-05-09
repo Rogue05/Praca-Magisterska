@@ -7,11 +7,14 @@ ext_modules = [
         "PFlib",
         # sorted(glob("*.cpp")),  # Sort source files for reproducibility
         ["particle_filter.cpp",],
+        swig_opts=['-ggdb',],
+        include_dirs=['include',]
     ),
 ]
 
 setup(
     name="PFlib",
     # extra_compile_args=['-O0','-Wall','-g'],
+    # extra_compile_args=['-Iinclude'],
     ext_modules=ext_modules,
 )

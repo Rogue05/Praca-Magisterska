@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 
 import PFlib as pf
 
-pop_size = 100000
+pop_size = 1000
 d_vel = 0.1
-d_ori = 0.1
+d_ori = 0.01
 
 #================================
 
@@ -22,41 +22,42 @@ print('minmax =',grid.max(),grid.min())
 
 mapa = pf.HeightMap(grid)
 
-model = pf.Model(mapa,d_ori,d_vel)
-pop = model.get_random_pop(pop_size)
+# model = pf.Model(mapa)
+pop = pf.get_random_pop(mapa, pop_size)
 weights = pf.get_uniform_weights(pop_size)
+
+pop['ori'] = np.pi/4 # hehe
 
 #================================
 
 
 
-plt.ion()
-fig = plt.figure(figsize=(7,7))
-plt.imshow(np.array(mapa.get_grid()).T, cmap='gray')
-real_line, = plt.plot([],[],'.r',ms=15)
-pop_line, = plt.plot(*pf.as_array(pop),'.b',alpha=0.01)
-est_line, = plt.plot([],[],'.y',ms=15)
+# plt.ion()
+# fig = plt.figure(figsize=(7,7))
+# plt.imshow(np.array(mapa.get_grid()).T, cmap='gray')
+# real_line, = plt.plot([],[],'.r',ms=15)
+# pop_line, = plt.plot(*pf.as_array(pop),'.b',alpha=0.01)
+# est_line, = plt.plot([],[],'.y',ms=15)
 
-plt.xlim([-1,1001])
-plt.ylim([-1,1001])
-plt.axis('equal')
-plt.show()
-fig.canvas.draw()
-fig.canvas.flush_events()
+# plt.xlim([-1,1001])
+# plt.ylim([-1,1001])
+# plt.axis('equal')
+# plt.show()
+# fig.canvas.draw()
+# fig.canvas.flush_events()
 
 for i in range(1000):
-	if not plt.fignum_exists(fig.number):
-		break
+	# if not plt.fignum_exists(fig.number):
+	# 	break
 
-	# model.drift_state(real_state, 0.1, 0.0)
-	model.drift_state(real_state, 0.0, 0.0)
-	# model.drift(pop, 0.1, 0.0)
-	model.drift(pop, 0.0, 0.0)
+	pf.drift_state(mapa, real_state, 0.0, 0.0)
+	pf.drift_pop(mapa, pop, 0.0, 0.0, d_ori, d_vel)
 
 	print('      r ',i,real_state.x,real_state.y,real_state.ori,real_state.vel)
 
-	meas = model.get_meas(real_state)
-	weights = model.update_weights(meas, pop, weights)
+	# meas = model.get_meas(real_state)
+	meas = mapa.get_meas(real_state.x,real_state.y,real_state.ori)
+	weights = pf.update_weights(mapa, meas, pop, weights)
 
 	est_state = pf.get_est(pop,weights)
 	print('      e' ,i,est_state.x,est_state.y,est_state.ori,est_state.vel)	
@@ -66,16 +67,22 @@ for i in range(1000):
 	print('N_eff',effN)
 	
 	if effN < 0.8*pop_size:
-		print('resample',effN)
-		pop = pf.roulette_wheel_resample(pop, weights)
-		# pop = pf.sus_resample(pop, weights)
+		print('resample',effN,pop_size)
+
+		alpha = 100
+		pop_size = pf.get_new_N(mapa, pop, weights, meas, alpha)
+		# print('Done-',flush=True)
+		
+		# pop = pf.roulette_wheel_resample(pop, weights)
+		pop = pf.sus_resample(pop, weights)
 		weights = pf.get_uniform_weights(pop_size)
+		# print('Done',flush=True)
 
-	pop_line.set_data(*pf.as_array(pop))
-	real_line.set_data(real_state.x,real_state.y)
-	est_line.set_data(est_state.x,est_state.y)
+	# pop_line.set_data(*pf.as_array(pop))
+	# real_line.set_data(real_state.x,real_state.y)
+	# est_line.set_data(est_state.x,est_state.y)
 
-	if i % 10 != 0:
-		continue
-	fig.canvas.draw()
-	fig.canvas.flush_events()
+	# if i % 10 != 1:
+	# 	continue
+	# fig.canvas.draw()
+	# fig.canvas.flush_events()
