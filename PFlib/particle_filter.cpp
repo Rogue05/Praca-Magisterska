@@ -573,25 +573,107 @@ void regularize(py::array_t<robot_2d> a_pop,
     }
 }
 
-// #include <boost/numeric/interval.hpp>
+#include <boost/numeric/interval.hpp>
 // #include <boost/icl/continuous_interval.hpp>
 
-// using namespace boost;
+using namespace boost;
 // using namespace boost::icl;
-// using interval = continuous_interval<double>;
+using namespace boost::numeric;
+// using namespace interval_lib;
+// using intd = continuous_interval<double>;
+// using intd = interval<double>;
+typedef boost::numeric::interval<
+    double,
+    boost::numeric::interval_lib::policies<
+        boost::numeric::interval_lib::save_state<
+            boost::numeric::interval_lib::rounded_transc_std<double> >,
+        boost::numeric::interval_lib::checking_base<double> > >
+    intd;
 
 struct robot_2di{
-    interval x, y, vel, ori;
+    intd x, y, vel, ori;
     robot_2di(double xmin, double xmax,
             double ymin, double ymax,
             double orimin, double orimax,
             // double ori_,
             double velmin, double velmax)
-        : x(construct<interval>(xmin, xmax)),
-        y(construct<interval>(ymin, ymax)),
-        ori(construct<interval>(orimin, orimax)),
+        : x(xmin, xmax),
+        y(ymin, ymax),
+        ori(orimin, orimax),
         // ori(ori_),
-        vel(construct<interval>(velmin, velmax)){}
+        vel(velmin, velmax){}
+        // : x(construct<intd>(xmin, xmax)),
+        // y(construct<intd>(ymin, ymax)),
+        // ori(construct<intd>(orimin, orimax)),
+        // // ori(ori_),
+        // vel(construct<intd>(velmin, velmax)){}
+};
+
+struct BoxParticleFilter{
+    std::shared_ptr<Map> map;
+    std::vector<robot_2di> pop;
+    std::vector<double> weights;
+
+    BoxParticleFilter(std::shared_ptr<Map> map_): map(map_){};
+
+    intd get_meas_interval(robot_2di state){
+        double mini = 10000, maxi = 0;
+        for (int x = state.x.lower(); x < state.x.upper(); ++x){
+            for (int y = state.y.lower(); y < state.y.upper(); ++y){
+                auto meas = map->get_meas(x, y, 0.0);
+                mini = std::min(mini, meas);
+                maxi = std::max(maxi, meas);
+            }
+        }
+        return intd(mini, maxi);
+    }
+
+    void init_pop(size_t sqrtN){
+        double sizeX = map->get_sizeX()/sqrtN;
+        double sizeY = map->get_sizeY()/sqrtN;
+
+        for(size_t x = 0; x < sqrtN; ++x){
+            for(size_t y = 0; y < sqrtN; ++y){
+                pop.emplace_back(sizeX*x,sizeX*(x+1),
+                                sizeY*y,sizeY*(y+1),
+                                0.0, PI2,
+                                5, 10);
+                weights.push_back(1.0/sqrtN/sqrtN);
+            }
+        }
+    }
+
+    void drift(double dori, double stdori){
+        auto u = intd(dori-3*stdori, dori+3*stdori);
+        double sizeX = map->get_sizeX();
+        double sizeY = map->get_sizeY();
+
+        for (auto& p:pop){
+            p.ori = p.ori + u;
+            p.x += cos(p.ori)*p.vel;
+            p.y += sin(p.ori)*p.vel;
+            p.x.set(max(p.x.lower(), double(0.0)),min(p.x.upper(),sizeX));
+            p.y.set(max(p.y.lower(), double(0.0)),min(p.y.upper(),sizeY));
+        }
+    }
+
+    py::array_t<double> get_pop(){
+        std::vector<size_t> shape{pop.size(),8};
+        auto a_ret = py::array_t<double>(shape);
+        auto ret = a_ret.mutable_unchecked<2>();
+
+        for (size_t i = 0; i < pop.size(); ++i){
+            ret(i,0) = pop[i].x.lower();
+            ret(i,1) = pop[i].x.upper();
+            ret(i,2) = pop[i].y.lower();
+            ret(i,3) = pop[i].y.upper();
+            ret(i,4) = pop[i].ori.lower();
+            ret(i,5) = pop[i].ori.upper();
+            ret(i,6) = pop[i].vel.lower();
+            ret(i,7) = pop[i].vel.upper();
+        }
+        return a_ret;
+    }
 };
 
 // struct robot_2di{
@@ -608,51 +690,51 @@ struct robot_2di{
 //     robot_2di():robot_2di(0.0, 0.0, 0.0, 0.0, 0.0, 0.0){};
 // };
 
-py::array_t<robot_2di> get_interval_pop(
-    std::shared_ptr<Map> map,size_t sqrtN){
-    auto ret = py::array_t<robot_2di>(sqrtN*sqrtN);
-    py::buffer_info buf = ret.request();
-    auto ptr = static_cast<robot_2di*>(buf.ptr);
+// py::array_t<robot_2di> get_interval_pop(
+//     std::shared_ptr<Map> map,size_t sqrtN){
+//     auto ret = py::array_t<robot_2di>(sqrtN*sqrtN);
+//     py::buffer_info buf = ret.request();
+//     auto ptr = static_cast<robot_2di*>(buf.ptr);
     
-    double sizeX = map->get_sizeX()/sqrtN;
-    double sizeY = map->get_sizeY()/sqrtN;
+//     double sizeX = map->get_sizeX()/sqrtN;
+//     double sizeY = map->get_sizeY()/sqrtN;
 
-    for(size_t x = 0; x < sqrtN; ++x){
-        for(size_t y = 0; y < sqrtN; ++y){
-            ptr[x*sqrtN+y] = {sizeX*x,sizeX*(x+1),
-                                sizeY*y,sizeY*(y+1),
-                                0.0, PI2,
-                                5, 10};
-        }
-    }
-    return ret;
-}
+//     for(size_t x = 0; x < sqrtN; ++x){
+//         for(size_t y = 0; y < sqrtN; ++y){
+//             ptr[x*sqrtN+y] = {sizeX*x,sizeX*(x+1),
+//                                 sizeY*y,sizeY*(y+1),
+//                                 0.0, PI2,
+//                                 5, 10};
+//         }
+//     }
+//     return ret;
+// }
 
-std::pair<double,double> get_meas_interval(std::shared_ptr<Map> map,
-    robot_2di state){
-    double mini = 10000, maxi = 0;
-    for (int x = state.xmin; x < state.xmax; ++x){
-        for (int y = state.ymin; y < state.ymax; ++y){
-            auto meas = map->get_meas(x, y, 0.0);
-            mini = std::min(mini, meas);
-            maxi = std::max(maxi, meas);
-        }
-    }
-    return {mini, maxi};
-}
+// std::pair<double,double> get_meas_interval(std::shared_ptr<Map> map,
+//     robot_2di state){
+//     double mini = 10000, maxi = 0;
+//     for (int x = state.x.lower(); x < state.x.upper(); ++x){
+//         for (int y = state.y.lower(); y < state.y.upper(); ++y){
+//             auto meas = map->get_meas(x, y, 0.0);
+//             mini = std::min(mini, meas);
+//             maxi = std::max(maxi, meas);
+//         }
+//     }
+//     return {mini, maxi};
+// }
 
-void drift_interval_pop(std::shared_ptr<Map> map,
-    py::array_t<robot_2di> a_pop){
-    double mini = 10000, maxi = 0;
-    for (int x = state.xmin; x < state.xmax; ++x){
-        for (int y = state.ymin; y < state.ymax; ++y){
-            auto meas = map->get_meas(x, y, 0.0);
-            mini = std::min(mini, meas);
-            maxi = std::max(maxi, meas);
-        }
-    }
-    return {mini, maxi};
-}
+// void drift_interval_pop(std::shared_ptr<Map> map,
+//     py::array_t<robot_2di> a_pop){
+//     double mini = 10000, maxi = 0;
+//     for (int x = state.xmin; x < state.xmax; ++x){
+//         for (int y = state.ymin; y < state.ymax; ++y){
+//             auto meas = map->get_meas(x, y, 0.0);
+//             mini = std::min(mini, meas);
+//             maxi = std::max(maxi, meas);
+//         }
+//     }
+//     return {mini, maxi};
+// }
 
 // void drift_interval_state(std::shared_ptr<Map> map, 
 //     robot_2di& state, double ori, double dori, double dvel){
@@ -703,10 +785,10 @@ PYBIND11_MODULE(PFlib, m){
     // m.def("update_weights", update_weights);
     // m.def("drift_state", drift_state);
     // m.def("drift_pop", drift_pop);
-    m.def("get_interval_pop", get_interval_pop);
+    // m.def("get_interval_pop", get_interval_pop);
     
 
-    m.def("get_meas_interval", get_meas_interval);
+    // m.def("get_meas_interval", get_meas_interval);
     // m.def("get_linear_pop", get_linear_pop);
     // m.def("get_new_N", get_new_N,
     //     "Particle filtering with adaptive number of particles, doi=10.1109/AERO.2011.5747439");
@@ -722,30 +804,39 @@ PYBIND11_MODULE(PFlib, m){
         .def_readwrite("vel", &robot_2d::vel);
     PYBIND11_NUMPY_DTYPE(robot_2d, x, y, ori, vel);
 
-    py::class_<robot_2di>(m,"robot_2di")
-        .def(py::init<>())
-        // .def(py::init<double,double,double,double,double,double>())
-        .def(py::init<double,double,double,double,
-            double,double,double,double>())
-        .def_property("xmin", &robot_2di::x::lower)
-        .def_property("xmax", &robot_2di::x::upper)
-        .def_property("ymin", &robot_2di::y::lower)
-        .def_property("ymax", &robot_2di::y::upper)
-        .def_property("orimin", &robot_2di::ori::lower)
-        .def_property("orimax", &robot_2di::ori::upper)
-        .def_property("velmin", &robot_2di::vel::lower)
-        .def_property("velmax", &robot_2di::vel::upper);
+    // py::class_<robot_2di>(m,"robot_2di")
+    //     .def(py::init<>())
+    //     // .def(py::init<double,double,double,double,double,double>())
+    //     .def(py::init<double,double,double,double,
+    //         double,double,double,double>())
+    //     .def_property("xmin", &robot_2di.x::lower)
+    //     .def_property("xmax", &robot_2di::x::upper)
+    //     .def_property("ymin", &robot_2di::y::lower)
+    //     .def_property("ymax", &robot_2di::y::upper)
+    //     .def_property("orimin", &robot_2di::ori::lower)
+    //     .def_property("orimax", &robot_2di::ori::upper)
+    //     .def_property("velmin", &robot_2di::vel::lower)
+    //     .def_property("velmax", &robot_2di::vel::upper);
+
+
         // .def_readwrite("xmin", &robot_2di::xmin)
         // .def_readwrite("xmax", &robot_2di::xmax)
         // .def_readwrite("ymin", &robot_2di::ymin)
         // .def_readwrite("ymax", &robot_2di::ymax)
         // .def_readwrite("velmin", &robot_2di::velmin)
         // .def_readwrite("velmax", &robot_2di::velmax);
-    PYBIND11_NUMPY_DTYPE(robot_2di,
-        xmin, xmax,
-        ymin, ymax,
-        // ori,
-        velmin, velmax);
+    // PYBIND11_NUMPY_DTYPE(robot_2di,
+    //     xmin, xmax,
+    //     ymin, ymax,
+    //     // ori,
+    //     velmin, velmax);
+    // PYBIND11_NUMPY_DTYPE(robot_2di,x,y,ori,vel);
+
+    py::class_<BoxParticleFilter>(m,"BoxParticleFilter")
+        .def(py::init<std::shared_ptr<Map>>())
+        .def("init_pop",&BoxParticleFilter::init_pop)
+        .def("drift",&BoxParticleFilter::drift)
+        .def("get_pop",&BoxParticleFilter::get_pop);
 
     py::class_<Map, std::shared_ptr<Map>>(m, "Map");
 
