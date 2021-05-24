@@ -8,8 +8,6 @@
 #include <cmath>
 #include <iostream>
 
-#include <boost/numeric/interval.hpp>
-
 using namespace std;
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -33,6 +31,21 @@ struct Map{
         py::print(__func__, "is not implemented");
         return true;
     }
+
+
+    virtual double get_sizeX(){
+        py::print(__func__, "is not implemented");
+        return 0;
+    }
+    virtual double get_sizeY(){
+        py::print(__func__, "is not implemented");
+        return 0;
+    }
+    // virtual double get_meas_interval(double, double, double, double){
+    //     py::print(__func__, "is not implemented");
+    //     return 0.0;
+    // }
+
     virtual ~Map() = default;
 };
 
@@ -240,6 +253,14 @@ public:
         double sig = (gmax-gmin)/3;
         double p = (meas-real)/sig;
         return exp(-p*p/2)/sig/sqrt(PI2);
+    }
+
+    double get_sizeX() override{
+        return grid.size();
+    }
+
+    double get_sizeY() override{
+        return grid[0].size();
     }
 };
 
@@ -552,6 +573,109 @@ void regularize(py::array_t<robot_2d> a_pop,
     }
 }
 
+// #include <boost/numeric/interval.hpp>
+// #include <boost/icl/continuous_interval.hpp>
+
+// using namespace boost;
+// using namespace boost::icl;
+// using interval = continuous_interval<double>;
+
+struct robot_2di{
+    interval x, y, vel, ori;
+    robot_2di(double xmin, double xmax,
+            double ymin, double ymax,
+            double orimin, double orimax,
+            // double ori_,
+            double velmin, double velmax)
+        : x(construct<interval>(xmin, xmax)),
+        y(construct<interval>(ymin, ymax)),
+        ori(construct<interval>(orimin, orimax)),
+        // ori(ori_),
+        vel(construct<interval>(velmin, velmax)){}
+};
+
+// struct robot_2di{
+//     double xmin, xmax;
+//     double ymin, ymax;
+//     // double ori;
+//     double velmin, velmax;
+//     robot_2di(double xmin_, double xmax_,
+//         double ymin_, double ymax_,
+//         double velmin_, double velmax_):
+//             xmin(xmin_), xmax(xmax_),
+//             ymin(ymin_), ymax(ymax_),
+//             velmin(velmin_), velmax(velmax_){}
+//     robot_2di():robot_2di(0.0, 0.0, 0.0, 0.0, 0.0, 0.0){};
+// };
+
+py::array_t<robot_2di> get_interval_pop(
+    std::shared_ptr<Map> map,size_t sqrtN){
+    auto ret = py::array_t<robot_2di>(sqrtN*sqrtN);
+    py::buffer_info buf = ret.request();
+    auto ptr = static_cast<robot_2di*>(buf.ptr);
+    
+    double sizeX = map->get_sizeX()/sqrtN;
+    double sizeY = map->get_sizeY()/sqrtN;
+
+    for(size_t x = 0; x < sqrtN; ++x){
+        for(size_t y = 0; y < sqrtN; ++y){
+            ptr[x*sqrtN+y] = {sizeX*x,sizeX*(x+1),
+                                sizeY*y,sizeY*(y+1),
+                                0.0, PI2,
+                                5, 10};
+        }
+    }
+    return ret;
+}
+
+std::pair<double,double> get_meas_interval(std::shared_ptr<Map> map,
+    robot_2di state){
+    double mini = 10000, maxi = 0;
+    for (int x = state.xmin; x < state.xmax; ++x){
+        for (int y = state.ymin; y < state.ymax; ++y){
+            auto meas = map->get_meas(x, y, 0.0);
+            mini = std::min(mini, meas);
+            maxi = std::max(maxi, meas);
+        }
+    }
+    return {mini, maxi};
+}
+
+void drift_interval_pop(std::shared_ptr<Map> map,
+    py::array_t<robot_2di> a_pop){
+    double mini = 10000, maxi = 0;
+    for (int x = state.xmin; x < state.xmax; ++x){
+        for (int y = state.ymin; y < state.ymax; ++y){
+            auto meas = map->get_meas(x, y, 0.0);
+            mini = std::min(mini, meas);
+            maxi = std::max(maxi, meas);
+        }
+    }
+    return {mini, maxi};
+}
+
+// void drift_interval_state(std::shared_ptr<Map> map, 
+//     robot_2di& state, double ori, double dori, double dvel){
+//     state.velmin += dvel;
+//     state.velmax += dvel;
+//     state.ori += dori;
+
+//     double tmpxmin = state.xmin + cos(ori)*state.velmin;
+//     double tmpxmax = state.xmax + cos(ori)*state.velmax;
+
+//     double tmpymin = state.ymin + cos(ori)*state.velmin;
+//     double tmpymax = state.ymax + cos(ori)*state.velmax;
+
+//     // double tmpy = state.y + sin(state.ori)*state.vel;
+
+//     if (!map->is_valid(tmpx,tmpy))
+//         state.ori += PI;
+//     // if (map.get_meas(state.x,state.y,state.ori)<state.vel)
+//     //     state.ori += PI;
+//     state.x += cos(state.ori)*state.vel;
+//     state.y += sin(state.ori)*state.vel;
+// }
+
 PYBIND11_MODULE(PFlib, m){
     m.doc() = "particle filter lib";
 
@@ -570,9 +694,24 @@ PYBIND11_MODULE(PFlib, m){
     m.def("get_linear_pop", get_linear_pop);
     m.def("get_new_N", get_new_N,
         "Particle filtering with adaptive number of particles, doi=10.1109/AERO.2011.5747439");
-
     m.def("regularize", regularize,
         "actualy covered in drift");
+
+    // m.def("as_array", as_array);
+    // m.def("get_uniform_weights", get_uniform_weights);
+    // m.def("get_est", get_est);
+    // m.def("update_weights", update_weights);
+    // m.def("drift_state", drift_state);
+    // m.def("drift_pop", drift_pop);
+    m.def("get_interval_pop", get_interval_pop);
+    
+
+    m.def("get_meas_interval", get_meas_interval);
+    // m.def("get_linear_pop", get_linear_pop);
+    // m.def("get_new_N", get_new_N,
+    //     "Particle filtering with adaptive number of particles, doi=10.1109/AERO.2011.5747439");
+    // m.def("regularize", regularize,
+    //     "actualy covered in drift");
 
     py::class_<robot_2d>(m,"robot_2d")
         .def(py::init<>())
@@ -582,6 +721,31 @@ PYBIND11_MODULE(PFlib, m){
         .def_readwrite("ori", &robot_2d::ori)
         .def_readwrite("vel", &robot_2d::vel);
     PYBIND11_NUMPY_DTYPE(robot_2d, x, y, ori, vel);
+
+    py::class_<robot_2di>(m,"robot_2di")
+        .def(py::init<>())
+        // .def(py::init<double,double,double,double,double,double>())
+        .def(py::init<double,double,double,double,
+            double,double,double,double>())
+        .def_property("xmin", &robot_2di::x::lower)
+        .def_property("xmax", &robot_2di::x::upper)
+        .def_property("ymin", &robot_2di::y::lower)
+        .def_property("ymax", &robot_2di::y::upper)
+        .def_property("orimin", &robot_2di::ori::lower)
+        .def_property("orimax", &robot_2di::ori::upper)
+        .def_property("velmin", &robot_2di::vel::lower)
+        .def_property("velmax", &robot_2di::vel::upper);
+        // .def_readwrite("xmin", &robot_2di::xmin)
+        // .def_readwrite("xmax", &robot_2di::xmax)
+        // .def_readwrite("ymin", &robot_2di::ymin)
+        // .def_readwrite("ymax", &robot_2di::ymax)
+        // .def_readwrite("velmin", &robot_2di::velmin)
+        // .def_readwrite("velmax", &robot_2di::velmax);
+    PYBIND11_NUMPY_DTYPE(robot_2di,
+        xmin, xmax,
+        ymin, ymax,
+        // ori,
+        velmin, velmax);
 
     py::class_<Map, std::shared_ptr<Map>>(m, "Map");
 
