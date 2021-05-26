@@ -574,14 +574,9 @@ void regularize(py::array_t<robot_2d> a_pop,
 }
 
 #include <boost/numeric/interval.hpp>
-// #include <boost/icl/continuous_interval.hpp>
 
 using namespace boost;
-// using namespace boost::icl;
 using namespace boost::numeric;
-// using namespace interval_lib;
-// using intd = continuous_interval<double>;
-// using intd = interval<double>;
 typedef boost::numeric::interval<
     double,
     boost::numeric::interval_lib::policies<
@@ -595,18 +590,11 @@ struct robot_2di{
     robot_2di(double xmin, double xmax,
             double ymin, double ymax,
             double orimin, double orimax,
-            // double ori_,
             double velmin, double velmax)
         : x(xmin, xmax),
         y(ymin, ymax),
         ori(orimin, orimax),
-        // ori(ori_),
         vel(velmin, velmax){}
-        // : x(construct<intd>(xmin, xmax)),
-        // y(construct<intd>(ymin, ymax)),
-        // ori(construct<intd>(orimin, orimax)),
-        // // ori(ori_),
-        // vel(construct<intd>(velmin, velmax)){}
 };
 
 struct BoxParticleFilter{
@@ -626,6 +614,23 @@ struct BoxParticleFilter{
             }
         }
         return intd(mini, maxi);
+    }
+
+    void update_weights(double meas, double dm){
+        intd real_meas(meas-3*dm, meas+3*dm);
+        double sum = 0.0;
+        for (size_t i = 0; i < pop.size(); ++i){
+            auto meas = get_meas_interval(pop[i]);
+            auto r = intersect(real_meas, meas);
+            double A = 0;
+            if (width(r) > 1e-10) A = norm(r)/norm(meas);
+            weights[i]*=A;
+            sum += weights[i];
+        }
+        for (size_t i = 0; i < pop.size(); ++i){
+            weights[i]/=sum;
+            // py::print(weights[i]);
+        }
     }
 
     void init_pop(size_t sqrtN){
@@ -676,87 +681,6 @@ struct BoxParticleFilter{
     }
 };
 
-// struct robot_2di{
-//     double xmin, xmax;
-//     double ymin, ymax;
-//     // double ori;
-//     double velmin, velmax;
-//     robot_2di(double xmin_, double xmax_,
-//         double ymin_, double ymax_,
-//         double velmin_, double velmax_):
-//             xmin(xmin_), xmax(xmax_),
-//             ymin(ymin_), ymax(ymax_),
-//             velmin(velmin_), velmax(velmax_){}
-//     robot_2di():robot_2di(0.0, 0.0, 0.0, 0.0, 0.0, 0.0){};
-// };
-
-// py::array_t<robot_2di> get_interval_pop(
-//     std::shared_ptr<Map> map,size_t sqrtN){
-//     auto ret = py::array_t<robot_2di>(sqrtN*sqrtN);
-//     py::buffer_info buf = ret.request();
-//     auto ptr = static_cast<robot_2di*>(buf.ptr);
-    
-//     double sizeX = map->get_sizeX()/sqrtN;
-//     double sizeY = map->get_sizeY()/sqrtN;
-
-//     for(size_t x = 0; x < sqrtN; ++x){
-//         for(size_t y = 0; y < sqrtN; ++y){
-//             ptr[x*sqrtN+y] = {sizeX*x,sizeX*(x+1),
-//                                 sizeY*y,sizeY*(y+1),
-//                                 0.0, PI2,
-//                                 5, 10};
-//         }
-//     }
-//     return ret;
-// }
-
-// std::pair<double,double> get_meas_interval(std::shared_ptr<Map> map,
-//     robot_2di state){
-//     double mini = 10000, maxi = 0;
-//     for (int x = state.x.lower(); x < state.x.upper(); ++x){
-//         for (int y = state.y.lower(); y < state.y.upper(); ++y){
-//             auto meas = map->get_meas(x, y, 0.0);
-//             mini = std::min(mini, meas);
-//             maxi = std::max(maxi, meas);
-//         }
-//     }
-//     return {mini, maxi};
-// }
-
-// void drift_interval_pop(std::shared_ptr<Map> map,
-//     py::array_t<robot_2di> a_pop){
-//     double mini = 10000, maxi = 0;
-//     for (int x = state.xmin; x < state.xmax; ++x){
-//         for (int y = state.ymin; y < state.ymax; ++y){
-//             auto meas = map->get_meas(x, y, 0.0);
-//             mini = std::min(mini, meas);
-//             maxi = std::max(maxi, meas);
-//         }
-//     }
-//     return {mini, maxi};
-// }
-
-// void drift_interval_state(std::shared_ptr<Map> map, 
-//     robot_2di& state, double ori, double dori, double dvel){
-//     state.velmin += dvel;
-//     state.velmax += dvel;
-//     state.ori += dori;
-
-//     double tmpxmin = state.xmin + cos(ori)*state.velmin;
-//     double tmpxmax = state.xmax + cos(ori)*state.velmax;
-
-//     double tmpymin = state.ymin + cos(ori)*state.velmin;
-//     double tmpymax = state.ymax + cos(ori)*state.velmax;
-
-//     // double tmpy = state.y + sin(state.ori)*state.vel;
-
-//     if (!map->is_valid(tmpx,tmpy))
-//         state.ori += PI;
-//     // if (map.get_meas(state.x,state.y,state.ori)<state.vel)
-//     //     state.ori += PI;
-//     state.x += cos(state.ori)*state.vel;
-//     state.y += sin(state.ori)*state.vel;
-// }
 
 PYBIND11_MODULE(PFlib, m){
     m.doc() = "particle filter lib";
@@ -835,6 +759,7 @@ PYBIND11_MODULE(PFlib, m){
     py::class_<BoxParticleFilter>(m,"BoxParticleFilter")
         .def(py::init<std::shared_ptr<Map>>())
         .def("init_pop",&BoxParticleFilter::init_pop)
+        .def("update_weights",&BoxParticleFilter::update_weights)
         .def("drift",&BoxParticleFilter::drift)
         .def("get_pop",&BoxParticleFilter::get_pop);
 
