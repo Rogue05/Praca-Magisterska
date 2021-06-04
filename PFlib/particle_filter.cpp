@@ -770,21 +770,24 @@ struct BoxParticleFilter{
         size_t j = 0;
 
         size_t counter = 0, ind = 0;
+        // py::print("stats:",init, step, sum);
         for (size_t i=0; i < pop.size(); ++i){
             double lw = init+step*i;
             
-            while(wsum<lw){
-
-                // auto new_ints = pop[j].split(counter, axis);
-                // new_pop.insert(new_pop.end(),
-                //     new_ints.begin(),
-                //     new_ints.end()); 
-
-                counter = 0;
-                j++;
-                wsum+=weights[j];
-            }
             counter += 1;
+            if(wsum<lw || (i==pop.size()-1 && j>0)){
+                // py::print("adding",counter,lw, weights[i]);
+                auto new_ints = pop[j].split(counter, axis);
+                new_pop.insert(new_pop.end(),
+                    new_ints.begin(),
+                    new_ints.end());
+                counter=0;
+                while(wsum<lw){ 
+                    j++;
+                    wsum+=weights[j];
+                }
+            }
+            // counter += 1;
         }
         py::print("new size:",new_pop.size());
         pop = new_pop;
