@@ -595,6 +595,38 @@ struct robot_2di{
         y(ymin, ymax),
         ori(orimin, orimax),
         vel(velmin, velmax){}
+
+    std::vector<robot_2di> split(size_t N, int axis){
+        std::vector<robot_2di> ret;
+        for (size_t i=0;i<N;++i){
+            ret.push_back(*this);
+            // if (axis == 0 && width(x) > 1)
+            if (axis == 0 || axis == 2)
+                ret[i].x =
+                    (x-x.lower())/double(N) +
+                    x.lower() +
+                    width(x)*i/N;
+            // if (axis == 1 && width(y) > 1)
+            if (axis == 1 || axis == 3)
+                ret[i].y = (y-y.lower())/double(N) + y.lower() + width(y)*i/N;
+            // py::print("---",
+            //             ret[i].x.lower(),ret[i].x.upper(),
+            //             ret[i].y.lower(),ret[i].y.upper(),
+            //             ret[i].ori.lower(),ret[i].ori.upper(),
+            //             ret[i].vel.lower(),ret[i].vel.upper());
+            // py::print(ret[i].ori, ret[i].vel);
+            // if (axis == 2 && width(ori) > 0.1)
+            // if (axis == 2)
+            //     ret[i].ori = (ori-ori.lower())/double(N) + ori.lower() + width(ori)*i/N;
+            // if (axis == 3 && width(vel) > 1)
+            // if (axis == 3)
+            //     ret[i].vel = (vel-vel.lower())/double(N) + vel.lower() + width(vel)*i/N;
+            // auto tmp = (x-x.lower())/double(N);
+            // py::print(x.lower(), x.upper(),
+            //         tmp.lower(), tmp.upper(), (x.upper()-x.lower())/N, norm(x)/N);
+        }
+        return ret;
+    }
 };
 
 struct BoxParticleFilter{
@@ -602,7 +634,9 @@ struct BoxParticleFilter{
     std::vector<robot_2di> pop;
     std::vector<double> weights;
 
-    BoxParticleFilter(std::shared_ptr<Map> map_): map(map_){};
+    int axis;
+
+    BoxParticleFilter(std::shared_ptr<Map> map_): map(map_), axis(0){};
 
     intd get_meas_interval(robot_2di state){
         double mini = 10000, maxi = 0;
@@ -616,21 +650,32 @@ struct BoxParticleFilter{
         return intd(mini, maxi);
     }
 
-    void update_weights(double meas, double dm){
+    double update_weights(double meas, double dm){
         intd real_meas(meas-3*dm, meas+3*dm);
         double sum = 0.0;
         for (size_t i = 0; i < pop.size(); ++i){
             auto meas = get_meas_interval(pop[i]);
             auto r = intersect(real_meas, meas);
             double A = 0;
-            if (width(r) > 1e-10) A = norm(r)/norm(meas);
+            // if (width(r) > 1e-10) A = norm(r)/norm(meas);
+            if (width(r) > 1e-10) A = width(r)/width(meas);
             weights[i]*=A;
             sum += weights[i];
+            // if(pop[i].x.lower() <= 100 && pop[i].x.upper() >= 100 &&
+            //     pop[i].y.lower() <= 100 && pop[i].y.upper() >= 100)
+            //     py::print("calc:",A,width(r),width(meas));
+
         }
+
+        double effN = 0.0;
         for (size_t i = 0; i < pop.size(); ++i){
             weights[i]/=sum;
-            // py::print(weights[i]);
+            // if(pop[i].x.lower() <= 100 && pop[i].x.upper() >= 100 &&
+            //     pop[i].y.lower() <= 100 && pop[i].y.upper() >= 100)
+            //     py::print("w:",weights[i]);
+            effN+=weights[i]*weights[i];
         }
+        return 1/effN; 
     }
 
     void init_pop(size_t sqrtN){
@@ -641,8 +686,10 @@ struct BoxParticleFilter{
             for(size_t y = 0; y < sqrtN; ++y){
                 pop.emplace_back(sizeX*x,sizeX*(x+1),
                                 sizeY*y,sizeY*(y+1),
-                                0.0, PI2,
-                                5, 10);
+                                PI/4-0.1, PI/4+0.1,
+                                // 0.0, PI2,
+                                // 5, 10);
+                                10.0-0.1, 10.0+0.1);
                 weights.push_back(1.0/sqrtN/sqrtN);
             }
         }
@@ -678,6 +725,73 @@ struct BoxParticleFilter{
             ret(i,7) = pop[i].vel.upper();
         }
         return a_ret;
+    }
+    py::array_t<double> get_est(){
+        std::vector<size_t> shape{3};
+        auto a_ret = py::array_t<double>(shape);
+        auto ret = a_ret.mutable_unchecked<1>();
+
+        double x=0,y=0,orix=0,oriy=0,vel=0;
+        for(size_t i = 0; i<pop.size();++i){
+            double cx = (pop[i].x.upper() + pop[i].x.lower())/2;
+            double cy = (pop[i].y.upper() + pop[i].y.lower())/2;
+            double cvel = (pop[i].vel.upper() + pop[i].vel.lower())/2;
+            // orix+=cos(pop[i].ori)*weights[i];
+            // oriy+=sin(pop[i].ori)*weights[i];
+            x+=cx*weights[i];
+            y+=cy*weights[i];
+            vel+=cvel*weights[i];
+        }
+        double sum = 0;
+        for(size_t i = 0; i<weights.size();++i) sum+=weights[i];
+        x /= sum;
+        y /= sum;
+        // orix /= sum;
+        // oriy /= sum;
+        vel /= sum;
+
+        ret(0) = x;
+        ret(1) = y;
+        // ret(2) = ori;
+        // ret(3) = vel;
+        ret(2) = vel;
+        return a_ret;
+    }
+
+    void resample(){
+        std::default_random_engine gen;
+        
+        std::vector<robot_2di> new_pop;
+
+        double sum = 0, wsum = weights[0];
+        for (size_t i = 0; i < weights.size(); ++i) sum+=weights[i];
+        double step = sum/pop.size();
+        double init = std::uniform_real_distribution<double>(0.,step)(gen);
+        size_t j = 0;
+
+        size_t counter = 0, ind = 0;
+        for (size_t i=0; i < pop.size(); ++i){
+            double lw = init+step*i;
+            
+            while(wsum<lw){
+
+                // auto new_ints = pop[j].split(counter, axis);
+                // new_pop.insert(new_pop.end(),
+                //     new_ints.begin(),
+                //     new_ints.end()); 
+
+                counter = 0;
+                j++;
+                wsum+=weights[j];
+            }
+            counter += 1;
+        }
+        py::print("new size:",new_pop.size());
+        pop = new_pop;
+        axis+=1;
+        for (size_t i = 0; i < weights.size(); ++i)
+            weights[i] = 1.0/weights.size();
+        // return a_new_pop;
     }
 };
 
@@ -761,6 +875,8 @@ PYBIND11_MODULE(PFlib, m){
         .def("init_pop",&BoxParticleFilter::init_pop)
         .def("update_weights",&BoxParticleFilter::update_weights)
         .def("drift",&BoxParticleFilter::drift)
+        .def("get_est",&BoxParticleFilter::get_est)
+        .def("resample",&BoxParticleFilter::resample)
         .def("get_pop",&BoxParticleFilter::get_pop);
 
     py::class_<Map, std::shared_ptr<Map>>(m, "Map");
@@ -778,3 +894,10 @@ PYBIND11_MODULE(PFlib, m){
         .def("get_grid", &HeightMap::get_grid)
         .def("get_meas", py::vectorize(&HeightMap::get_meas));
 }
+
+
+
+/*
+Jakie badania
+
+*/
