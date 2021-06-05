@@ -2,50 +2,42 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as pat
 
+# w = np.random.uniform(0,1,10)
+# w /= w.sum()
+# print(w)
+
+# step = w.sum()/len(w)
+# init = np.random.uniform(0,step)
+# print(step,init)
+
+# inds = init+np.arange(0,len(w))*step
+# print(inds)
+
+# ret = []
+# i = 0
+# oldi = i
+
+# suma = w[0]
+# cnt = 0
+
+# fin = []
+# for j in range(len(w)):
+# 	p = init+j*step
+
+# 	while suma < p:
+# 		i+=1
+# 		suma+=w[i]
+
+# 	cnt+=1
+# 	ret.append(i)
+
+# fin.append((i,cnt))
+# print(ret)
+# print(fin)
 
 
-w = np.random.uniform(0,1,10)
-w /= w.sum()
-print(w)
-
-step = w.sum()/len(w)
-init = np.random.uniform(0,step)
-print(step,init)
-
-inds = init+np.arange(0,len(w))*step
-print(inds)
-
-ret = []
-i = 0
-oldi = i
-
-suma = w[0]
-cnt = 0
-
-fin = []
-for j in range(len(w)):
-	p = init+j*step
-
-	while suma < p:
-		i+=1
-		suma+=w[i]
-
-	cnt+=1
-	ret.append(i)
-
-	print('add',i,cnt)
-	if i != oldi:
-		fin.append((oldi, cnt-1))
-		oldi = i
-		cnt = 1
-
-fin.append((i,cnt))
-print(ret)
-print(fin)
-
-
-import sys
-sys.exit()
+# import sys
+# sys.exit()
 
 import PFlib as pf
 
@@ -67,15 +59,17 @@ for rct in patches:
 
 
 # real_state = pf.robot_2d(500, 500, np.pi/4, 10)
+# real_state = pf.robot_2d(100, 500, np.pi/4, 10)
 real_state = pf.robot_2d(100, 100, np.pi/4, 10)
 
-# from noise import pnoise
+from noise import pnoise
 # grid = pnoise(2**10,2**10,2**7)
-# print('minmax =',grid.max(),grid.min())
-
-grid = np.load('map.npy')
-grid /= grid.max()
+grid = pnoise(2**11,2**11,2**8)
 print('minmax =',grid.max(),grid.min())
+
+# grid = np.load('map.npy')
+# grid /= grid.max()
+# print('minmax =',grid.max(),grid.min())
 
 mapa = pf.HeightMap(grid)
 
@@ -104,7 +98,18 @@ for ind in range(300):
 	bpf.drift(0.0,0.0)
 	meas = mapa.get_meas(real_state.x,real_state.y,real_state.ori)
 	effN = bpf.update_weights(meas, 0.01)
-	# print('effN',effN,meas)
+
+
+	if real_state.x >= grid.shape[0] or\
+		real_state.y >= grid.shape[1]:
+		break
+		
+	if np.isnan(effN):
+		print('reinit')
+		bpf.init_pop(pop_sqrt)
+		print('done')
+		continue
+
 	est = bpf.get_est()
 	print(ind, 'effN',effN, est, real_state.x, real_state.y)
 	# est = bpf.get_est()
@@ -117,9 +122,10 @@ for ind in range(300):
 		print('           resample',cnt%4)
 		bpf.resample()
 
+
+
 	if not plt.get_fignums():
 		break
-
 
 	rx.append(real_state.x);ry.append(real_state.y);
 	realpos.set_data(rx, ry)
@@ -163,7 +169,8 @@ for ind in range(300):
 # # plt.show()
 
 plt.ioff()
-plt.show()
+# plt.show()
+plt.figure(2)
 plt.plot(errx)
 plt.plot(erry)
 plt.show()

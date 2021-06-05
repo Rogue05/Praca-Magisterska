@@ -638,38 +638,29 @@ struct BoxParticleFilter{
     double update_weights(double meas, double dm){
         intd real_meas(meas-3*dm, meas+3*dm);
         double sum = 0.0;
-        // py::print(__func__, "---", weights[1]);
         for (size_t i = 0; i < pop.size(); ++i){
             auto meas = get_meas_interval(pop[i]);
             auto r = intersect(real_meas, meas);
             double A = 0;
-            // if (width(r) > 1e-10) A = norm(r)/norm(meas);
             if (width(r) > 1e-10) A = width(r)/width(meas);
             weights[i]*=A;
-            // py::print(__func__, "---", weights[i]);
-
             sum += weights[i];
-            // if(pop[i].x.lower() <= 100 && pop[i].x.upper() >= 100 &&
-            //     pop[i].y.lower() <= 100 && pop[i].y.upper() >= 100)
-            //     py::print("calc:",A,width(r),width(meas));
-
         }
 
         double effN = 0.0;
         for (size_t i = 0; i < pop.size(); ++i){
             weights[i]/=sum;
-            // if(pop[i].x.lower() <= 100 && pop[i].x.upper() >= 100 &&
-            //     pop[i].y.lower() <= 100 && pop[i].y.upper() >= 100)
-            //     py::print("w:",weights[i]);
             effN+=weights[i]*weights[i];
         }
-        // py::print(__func__, effN, weights[1], sum);
         return 1/effN; 
     }
 
     void init_pop(size_t sqrtN){
         double sizeX = map->get_sizeX()/sqrtN;
         double sizeY = map->get_sizeY()/sqrtN;
+
+        pop.clear();
+        weights.clear();
 
         for(size_t x = 0; x < sqrtN; ++x){
             for(size_t y = 0; y < sqrtN; ++y){
@@ -760,52 +751,40 @@ struct BoxParticleFilter{
         double step = sum/pop.size();
         double init = std::uniform_real_distribution<double>(0.,step)(gen);
         size_t j = 0;
-        // if (wsum > init) 
-        // while(wsum<init){ 
-        //     j++;
-        //     wsum+=weights[j];
-        // }
 
         size_t counter = 0, ind = 0, cumsum = 0;
         py::print("stats:",j,init, step, sum);
+
+        std::vector<size_t> inds;
         for (size_t i=0; i < pop.size(); ++i){
             double lw = init+step*i;
 
-            counter += 1;
-            if(wsum<lw || (i==pop.size()-1 && j>0)){
-            // if(wsum<lw){
-
-                // py::print("adding",j,"times",counter,"total",cumsum,"w",weights[j]);
-                // py::print("adding",j,"times",counter,"total",cumsum,"w",weights[j]<init);
-                if (weights[0]<init && i == 0) continue;
-                auto new_ints = pop[j].split(counter, axis);
-                new_pop.insert(new_pop.end(),
-                    new_ints.begin(),
-                    new_ints.end());
-                counter=0;
-                cumsum += counter;
-            // }
-
-                while(wsum<lw){ 
-                    j++;
-                    wsum+=weights[j];
-                }
+            while(wsum<lw){ 
+                j++;
+                wsum+=weights[j];
             }
-            // counter += 1;
+
+            inds.push_back(j);
         }
+
+        for (size_t i=0; i < pop.size(); ++i){
+            size_t counter = std::count(
+                inds.begin(),
+                inds.end(),
+                i);
+            if (counter==0) continue;
+            auto new_ints = pop[i].split(counter, axis);
+            new_pop.insert(new_pop.end(),
+                new_ints.begin(),
+                new_ints.end());
+        }
+
         py::print("new size:",new_pop.size(),counter,j,weights[j]);
         pop = new_pop;
-        // pop[0]=pop[1];
-
-        // for (size_t i=0; i < pop.size(); ++i)
-        //     py::print("NEW:",
-        //         pop[i].x.lower(),pop[i].x.upper(),
-        //         pop[i].y.lower(),pop[i].y.upper(),weights.size());
 
         axis+=1;
         for (size_t i = 0; i < weights.size(); ++i)
             weights[i] = 1.0/weights.size();
-        // return a_new_pop;
     }
 };
 
@@ -831,22 +810,6 @@ PYBIND11_MODULE(PFlib, m){
     m.def("regularize", regularize,
         "actualy covered in drift");
 
-    // m.def("as_array", as_array);
-    // m.def("get_uniform_weights", get_uniform_weights);
-    // m.def("get_est", get_est);
-    // m.def("update_weights", update_weights);
-    // m.def("drift_state", drift_state);
-    // m.def("drift_pop", drift_pop);
-    // m.def("get_interval_pop", get_interval_pop);
-    
-
-    // m.def("get_meas_interval", get_meas_interval);
-    // m.def("get_linear_pop", get_linear_pop);
-    // m.def("get_new_N", get_new_N,
-    //     "Particle filtering with adaptive number of particles, doi=10.1109/AERO.2011.5747439");
-    // m.def("regularize", regularize,
-    //     "actualy covered in drift");
-
     py::class_<robot_2d>(m,"robot_2d")
         .def(py::init<>())
         .def(py::init<double,double,double,double>())
@@ -855,34 +818,6 @@ PYBIND11_MODULE(PFlib, m){
         .def_readwrite("ori", &robot_2d::ori)
         .def_readwrite("vel", &robot_2d::vel);
     PYBIND11_NUMPY_DTYPE(robot_2d, x, y, ori, vel);
-
-    // py::class_<robot_2di>(m,"robot_2di")
-    //     .def(py::init<>())
-    //     // .def(py::init<double,double,double,double,double,double>())
-    //     .def(py::init<double,double,double,double,
-    //         double,double,double,double>())
-    //     .def_property("xmin", &robot_2di.x::lower)
-    //     .def_property("xmax", &robot_2di::x::upper)
-    //     .def_property("ymin", &robot_2di::y::lower)
-    //     .def_property("ymax", &robot_2di::y::upper)
-    //     .def_property("orimin", &robot_2di::ori::lower)
-    //     .def_property("orimax", &robot_2di::ori::upper)
-    //     .def_property("velmin", &robot_2di::vel::lower)
-    //     .def_property("velmax", &robot_2di::vel::upper);
-
-
-        // .def_readwrite("xmin", &robot_2di::xmin)
-        // .def_readwrite("xmax", &robot_2di::xmax)
-        // .def_readwrite("ymin", &robot_2di::ymin)
-        // .def_readwrite("ymax", &robot_2di::ymax)
-        // .def_readwrite("velmin", &robot_2di::velmin)
-        // .def_readwrite("velmax", &robot_2di::velmax);
-    // PYBIND11_NUMPY_DTYPE(robot_2di,
-    //     xmin, xmax,
-    //     ymin, ymax,
-    //     // ori,
-    //     velmin, velmax);
-    // PYBIND11_NUMPY_DTYPE(robot_2di,x,y,ori,vel);
 
     py::class_<BoxParticleFilter>(m,"BoxParticleFilter")
         .def(py::init<std::shared_ptr<Map>>())
