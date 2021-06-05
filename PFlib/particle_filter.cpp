@@ -347,8 +347,12 @@ py::array_t<double> update_weights(
     for(size_t i=0; i < pop.shape(0); ++i){
         // py::print(i);
         ret(i) = weights(i)*map->get_meas_prob(real, pop(i).x, pop(i).y, pop(i).ori);
+        if(isnan(ret(i)) || isnan(weights(i))){
+            py::print(__func__,i,ret(i),weights(i),map->get_meas_prob(real, pop(i).x, pop(i).y, pop(i).ori));
+        }
         sum += ret(i);
     }
+    // py::print(__func__,"sum",sum,"flush"_a = true);
     for(size_t i=0; i < pop.shape(0); ++i){
         ret(i) /= sum;
     }
@@ -675,6 +679,17 @@ struct BoxParticleFilter{
         }
     }
 
+    double get_coeff(){
+        intd x, y;
+        double sum;
+        for (const auto& p:pop){
+            x = hull(x, p.x);
+            y = hull(y, p.y);
+            sum += width(p.x)*width(p.y);
+        }
+        return sqrt(sum/pop.size()/width(x)/width(y));
+    }
+
     void drift(double dori, double stdori){
         auto u = intd(dori-3*stdori, dori+3*stdori);
         double sizeX = map->get_sizeX();
@@ -826,6 +841,7 @@ PYBIND11_MODULE(PFlib, m){
         .def("drift",&BoxParticleFilter::drift)
         .def("get_est",&BoxParticleFilter::get_est)
         .def("resample",&BoxParticleFilter::resample)
+        .def("get_coeff",&BoxParticleFilter::get_coeff)
         .def("get_pop",&BoxParticleFilter::get_pop);
 
     py::class_<Map, std::shared_ptr<Map>>(m, "Map");

@@ -41,7 +41,8 @@ import matplotlib.patches as pat
 
 import PFlib as pf
 
-pop_sqrt = np.int64(np.sqrt(64))
+# pop_sqrt = np.int64(np.sqrt(64))
+pop_sqrt = np.int64(np.sqrt(1000))
 pop_size = pop_sqrt**2
 d_vel = 0.1
 d_ori = 0.01
@@ -62,14 +63,14 @@ for rct in patches:
 # real_state = pf.robot_2d(100, 500, np.pi/4, 10)
 real_state = pf.robot_2d(100, 100, np.pi/4, 10)
 
-from noise import pnoise
-# grid = pnoise(2**10,2**10,2**7)
-grid = pnoise(2**11,2**11,2**8)
-print('minmax =',grid.max(),grid.min())
-
-# grid = np.load('map.npy')
-# grid /= grid.max()
+# from noise import pnoise
+# # grid = pnoise(2**10,2**10,2**7)
+# grid = pnoise(2**11,2**11,2**8)
 # print('minmax =',grid.max(),grid.min())
+
+grid = np.load('map.npy')
+grid /= grid.max()
+print('minmax =',grid.max(),grid.min())
 
 mapa = pf.HeightMap(grid)
 
@@ -80,6 +81,10 @@ print('============================')
 
 mapg = np.array(mapa.get_grid()).T
 plt.imshow(mapg, cmap='gray')
+plt.xlim([-1,grid.shape[0]+1])
+plt.ylim([-1,grid.shape[1]+1])
+plt.xlabel('x')
+plt.ylabel('y')
 realpos, = plt.plot(real_state.x,real_state.y,'g')
 estpos, = plt.plot(real_state.x,real_state.y,'r')
 plt.ion()
@@ -99,15 +104,17 @@ for ind in range(300):
 	meas = mapa.get_meas(real_state.x,real_state.y,real_state.ori)
 	effN = bpf.update_weights(meas, 0.01)
 
+	print('    paving', bpf.get_coeff())
+
 
 	if real_state.x >= grid.shape[0] or\
 		real_state.y >= grid.shape[1]:
 		break
-		
+
 	if np.isnan(effN):
-		print('reinit')
+		# print('reinit')
 		bpf.init_pop(pop_sqrt)
-		print('done')
+		# print('done')
 		continue
 
 	est = bpf.get_est()
@@ -171,6 +178,16 @@ for ind in range(300):
 plt.ioff()
 # plt.show()
 plt.figure(2)
-plt.plot(errx)
-plt.plot(erry)
+errx = np.array(errx)
+erry = np.array(erry)
+err = np.sqrt(errx**2+erry**2)/10 #/vel
+plt.plot(err)
+plt.ylim([0,5])
+plt.ylabel('$d_{{err}}/v$')
+
+# plt.plot(errx)
+# plt.plot(erry)
+# plt.ylim([-50,50])
+
+plt.xlabel('t')
 plt.show()
