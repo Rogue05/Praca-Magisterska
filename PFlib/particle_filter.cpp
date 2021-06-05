@@ -600,30 +600,15 @@ struct robot_2di{
         std::vector<robot_2di> ret;
         for (size_t i=0;i<N;++i){
             ret.push_back(*this);
-            // if (axis == 0 && width(x) > 1)
-            if (axis == 0 || axis == 2)
+            if (width(x) > width(y))
                 ret[i].x =
                     (x-x.lower())/double(N) +
                     x.lower() +
                     width(x)*i/N;
-            // if (axis == 1 && width(y) > 1)
-            if (axis == 1 || axis == 3)
-                ret[i].y = (y-y.lower())/double(N) + y.lower() + width(y)*i/N;
-            // py::print("---",
-            //             ret[i].x.lower(),ret[i].x.upper(),
-            //             ret[i].y.lower(),ret[i].y.upper(),
-            //             ret[i].ori.lower(),ret[i].ori.upper(),
-            //             ret[i].vel.lower(),ret[i].vel.upper());
-            // py::print(ret[i].ori, ret[i].vel);
-            // if (axis == 2 && width(ori) > 0.1)
-            // if (axis == 2)
-            //     ret[i].ori = (ori-ori.lower())/double(N) + ori.lower() + width(ori)*i/N;
-            // if (axis == 3 && width(vel) > 1)
-            // if (axis == 3)
-            //     ret[i].vel = (vel-vel.lower())/double(N) + vel.lower() + width(vel)*i/N;
-            // auto tmp = (x-x.lower())/double(N);
-            // py::print(x.lower(), x.upper(),
-            //         tmp.lower(), tmp.upper(), (x.upper()-x.lower())/N, norm(x)/N);
+            else
+                ret[i].y = (y-y.lower())/double(N) +
+                    y.lower() +
+                    width(y)*i/N;
         }
         return ret;
     }
@@ -653,6 +638,7 @@ struct BoxParticleFilter{
     double update_weights(double meas, double dm){
         intd real_meas(meas-3*dm, meas+3*dm);
         double sum = 0.0;
+        // py::print(__func__, "---", weights[1]);
         for (size_t i = 0; i < pop.size(); ++i){
             auto meas = get_meas_interval(pop[i]);
             auto r = intersect(real_meas, meas);
@@ -660,6 +646,8 @@ struct BoxParticleFilter{
             // if (width(r) > 1e-10) A = norm(r)/norm(meas);
             if (width(r) > 1e-10) A = width(r)/width(meas);
             weights[i]*=A;
+            // py::print(__func__, "---", weights[i]);
+
             sum += weights[i];
             // if(pop[i].x.lower() <= 100 && pop[i].x.upper() >= 100 &&
             //     pop[i].y.lower() <= 100 && pop[i].y.upper() >= 100)
@@ -675,6 +663,7 @@ struct BoxParticleFilter{
             //     py::print("w:",weights[i]);
             effN+=weights[i]*weights[i];
         }
+        // py::print(__func__, effN, weights[1], sum);
         return 1/effN; 
     }
 
@@ -689,7 +678,7 @@ struct BoxParticleFilter{
                                 PI/4-0.1, PI/4+0.1,
                                 // 0.0, PI2,
                                 // 5, 10);
-                                10.0-0.1, 10.0+0.1);
+                                10.0-1.0, 10.0+1.0);
                 weights.push_back(1.0/sqrtN/sqrtN);
             }
         }
@@ -741,6 +730,7 @@ struct BoxParticleFilter{
             x+=cx*weights[i];
             y+=cy*weights[i];
             vel+=cvel*weights[i];
+            // py::print("w",weights[i]);
         }
         double sum = 0;
         for(size_t i = 0; i<weights.size();++i) sum+=weights[i];
@@ -755,6 +745,7 @@ struct BoxParticleFilter{
         // ret(2) = ori;
         // ret(3) = vel;
         ret(2) = vel;
+        py::print(__func__,x,y,sum);
         return a_ret;
     }
 
@@ -764,24 +755,37 @@ struct BoxParticleFilter{
         std::vector<robot_2di> new_pop;
 
         double sum = 0, wsum = weights[0];
+        // double sum = 0, wsum = 0;
         for (size_t i = 0; i < weights.size(); ++i) sum+=weights[i];
         double step = sum/pop.size();
         double init = std::uniform_real_distribution<double>(0.,step)(gen);
         size_t j = 0;
+        // if (wsum > init) 
+        // while(wsum<init){ 
+        //     j++;
+        //     wsum+=weights[j];
+        // }
 
-        size_t counter = 0, ind = 0;
-        // py::print("stats:",init, step, sum);
+        size_t counter = 0, ind = 0, cumsum = 0;
+        py::print("stats:",j,init, step, sum);
         for (size_t i=0; i < pop.size(); ++i){
             double lw = init+step*i;
-            
+
             counter += 1;
             if(wsum<lw || (i==pop.size()-1 && j>0)){
-                // py::print("adding",counter,lw, weights[i]);
+            // if(wsum<lw){
+
+                // py::print("adding",j,"times",counter,"total",cumsum,"w",weights[j]);
+                // py::print("adding",j,"times",counter,"total",cumsum,"w",weights[j]<init);
+                if (weights[0]<init && i == 0) continue;
                 auto new_ints = pop[j].split(counter, axis);
                 new_pop.insert(new_pop.end(),
                     new_ints.begin(),
                     new_ints.end());
                 counter=0;
+                cumsum += counter;
+            // }
+
                 while(wsum<lw){ 
                     j++;
                     wsum+=weights[j];
@@ -789,8 +793,15 @@ struct BoxParticleFilter{
             }
             // counter += 1;
         }
-        py::print("new size:",new_pop.size());
+        py::print("new size:",new_pop.size(),counter,j,weights[j]);
         pop = new_pop;
+        // pop[0]=pop[1];
+
+        // for (size_t i=0; i < pop.size(); ++i)
+        //     py::print("NEW:",
+        //         pop[i].x.lower(),pop[i].x.upper(),
+        //         pop[i].y.lower(),pop[i].y.upper(),weights.size());
+
         axis+=1;
         for (size_t i = 0; i < weights.size(); ++i)
             weights[i] = 1.0/weights.size();
