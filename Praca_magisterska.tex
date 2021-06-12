@@ -98,33 +98,59 @@ więc mianownik równania \ref{bayes_formula} jest stały względem $X_k$. Mają
 	p(X_k|Y_{0...k})=\mu p(Y_k|X_k)\int p(X_k|X_{k-1})p(X_{t-1}|Y_{0...t-1}) dX_{t-1}
 \end{equation}
 gdzie $\mu$ jest stałą normalizacyjną, pozostałą po przyjęciu że $p(Y_k|Y_{0...k})$ ma stałą wartość.
-\subsection{Importance sampling i regularyzacja}
-Równanie (5) stanowi podstawę konstrukcji wielu algorytmów....\\
-Istotna trudność w jego zastosowaniu polega jednak na tym, 
-
-Aby móc w praktyce zrealizować równanie (5), trzeba skorzystać z dwóch konceptów - importance samplingu(IS) i regularyzacji. \\
-Nie wiem czy jest sens to opisywać, bo koniec końców to się sprowadza do opisu algorytmu w kolejnym rozdziale
-\subsection{Podstawowy algorytm filtra cząsteczkowego}
-W filtrze cząsteczkowym, ciągłe rozkłady $p(\bullet)$ są symulowane za pomocą chmury ważonych cząstek. Każda cząstka wygląda w następujący sposób:
+\subsection{Reprezentacja rozkładu prawdopodobieństwa}
+Aby móc w praktyce zrealizować filtr cząsteczkowy, konieczne jest znalezienie sposobu na cyfrową reprezentację ciągłego rozkładu prawdopodobieństwa związanego ze stanem systemu. Robi się to przybliżając go za pomocą skończonego zbioru cząstek, gdzie każda cząstka wygląda w następujący sposób:
 \begin{equation*}
 	p_i=\{x_{k,i},w_{k,i}\}
 \end{equation*}
-Gdzie $x_{k,i}$ to stan w iteracji $k$ związany z cząstką $i$, $w_{k,i}$ to jej waga.
-Początkowo całą populację cząstek inicjuje się cząstkami z losowymi stanami i wagami, równymi dla każdej cząstki. Następnie wykonuje się w pętli:
+gdzie $x_{k,i}$ to stan w iteracji $k$ związany z $i$-tą cząstką, $w_{k,i}$ to jej waga. Korzystając z takiej reprezentacji, rozkład $p(X_k|Y_{0...k})$ ze wzoru \ref{evolution} można zapisać w następujący sposób:
+\begin{equation}
+	p(x_k|Y_{0...k})\approx \sum_{i=0}^{N} w_{k,i}	\delta(X_k-x_{k,i})
+\end{equation}
+gdzie $N$ oznacza liczbę cząstek, a $\delta$ to delta Dirac'a. Dzięki takiej reprezentacji prawdopodobieństwo $p(X_k|Y_{0...k-1})$ opisane we wzorze \ref{evolution} zostaje zastąpione przez wagę $w_{k,i}$ dla każdej cząstki, co sprawia, że równanie \ref{bayes_formula} upraszcza się do:
+\begin{equation}\label{weight_update}
+	w_{k,i} = w_{k-1,i} p(y_k|x_{k,i})
+\end{equation}
+
+% Warto zauważyć, że taka reprezentacja realizuje procedurę importance sampling
+
+\subsection{Podstawowy algorytm - SIR}
+Sam skrót SIR oznacza stochastic importance resampling, i jest to standardowa realizacja filtra cząsteczkowego w praktyce. Sam importance sampling polega na wykorzystaniu właściwości jednego rozkładu prawdopodobieństwa, do próbkowania z drugiego. W tym przypadku, próbkujemy z rozkładu $p(X_k|Y_{0...k})$ korzystając $p(Y_k|X_k)$.
+Algorytm SIR Przebiega w następujący sposób:
 \begin{enumerate}[label=(\alph*)]
-	\item Wyznacza się nowy zbiór cząstek, dla każdej cząstki $x_{k,i}$ uzyskuje się, symulując jej ewolucję, w oparciu o $x_{k-1,i}$. Model ruchu powinien uwzględniać szumy obecne w systemie.
-	\item Pojawia się nowy pomiar $Y_k$, na podstawie którego na którego podstawie modyfikuje się wagi poszczególnych cząstek.
-	\item Wagi są normalizowane.
-	\item Wyznacza się estymowany stan, wyznaczając ważoną średnią stanów wszystkich cząstek.
-	\item Wyznacza się efektywną liczbę cząstek według wzoru:
-	\begin{equation*}
+	\item Zaczyna się od zainicjowania zbioru cząstek losowymi stanami i równymi dla wszystkich cząstek wagami. Ważne jest, aby uzyskana w ten sposób populacja była w stanie odpowiednio oddać właściwości niezdyskretyzowanego rozkładu.
+	
+	\item Symuluje się ewolucję cząstek $x_{k-1,i}$, próbkując $x_{k,i}$ z rozkładu opisującego ewolucję systemu, $p(x_k|x_{k-1})$, obecnego w równaniu \ref{evolution}. W praktyce ważne jest, aby rozkład $p(x_k|x_{k-1})$ uwzględniał szumy obecne w systemie.
+	
+	\item Pojawia się nowy pomiar $Y_k$, na podstawie którego na którego podstawie modyfikuje się wagi poszczególnych cząstek, korzystając z równania \ref{weight_update}.
+
+	\item Wagi są normalizowane.	
+	\begin{equation}
+		w_{k,i}=\frac{w_{k,i}}{\sum_{j=0}^{N} w_{k,j}}
+	\end{equation}
+
+	\item Wyznacza się estymowany stan, wyznaczając ważoną średnią stanów wszystkich cząstek. Zazwyczaj jest to średnia ważona cząstek:
+	\begin{equation}
+		\hat{x_k} = \sum_{i=0}^{N} w_{k,i} x_{k,i}
+	\end{equation}
+	\item Przeprowadza się ponowne próbkowanie, generując nową populację cząstek próbkując z poprzedniej, korzystając z wag. W praktyce zazwyczaj nie przeprowadza się próbkowania co iterację, aby przyspieszyć obliczenia. Robi się to dopiero gdy spełnione jest pewne kryterium, którym najczęściej jest spadek efektywnej cząstek, opisanej równaniem \ref{neff_form} poniżej pewnego progu.
+	\begin{equation}\label{neff_form}
 		N_{eff_k} = \dfrac{1}{\sum w_{k,i}^2}
-	\end{equation*}
-	Jeśli jej wartość jest mniejsza, niż pewien próg, to przeprowadza się ponowne próbkowanie, generując nową populację cząstek (jest to sztuczka pozwalająca na ograniczenie liczby obliczeń, teoretycznie próbkowanie można przeprowadzać co iterację).
+	\end{equation}
+	Inne metody na określenie momentu próbkowania, można znaleźć na, przykład w \ref{adaptive_resampling}.
 \end{enumerate}
+\subsection{Adaptacja do wyznaczania lokalizacji}
+Rozwiązanie problemu wyznaczania lokalizacji za pomocą filtra cząsteczkowego często jest nazywane lokalizacją Monte Carlo. Celem jest wtedy wyznaczenie pozycji i orientacji pewnego obiektu, na przykład robota. Wtedy rozkład $p(x_k|x_{k-1})$ opisuje model ruchu obiektu, natomiast pomiary $y_k$ są zebranymi danymi sensorycznymi. Prawdopodobieństwo $p(y_k|x_{k,i})$ wyznacza się na podstawie znanej mapy otoczenia.
 
 \subsection{Przykład}
+Najprostszym przykładem problemu lokalizacji na którym można zademonstrować działanie filtra, jest ustalanie pozycji punktowego robota, przemieszczającego się ze stałą prędkością w kierunku ściany, mierząc swoją odległość od niej. Mapa w tym przypadku jest jednowymiarowa, a stan robota można opisać jedną liczbą zmiennoprzecinkową, mówiącą i jego pozycji. Pomiar $y_k$ jest odległością od robota do ściany na końcu drogi, natomiast rozkład $p(y_k|x_{k,i})$ przyjęto rozkład Gaussa. Na rysunku \ref{simple_example} przedstawiono efekt realizacji filtra cząsteczkowego. W tym przykładzie próbkowanie przeprowadzano na koniec każdej iteracji.
 
+\begin{figure}[H]\label{simple_example}
+	\begin{center}
+		\includegraphics[width=10cm]{./simple_example.png}
+		\caption{Przykładowa realizacja prostego filtra. Czerwona strzałka wskazuje kierunek ruchu robota, czerwone punkty pokazują estymowaną lokalizację robota, natomiast niebieskie punkty prawdziwe położenie. W kolejnych rzędach zestawiono histogramy położenia cząstek w poszczególnych iteracjach. Populacja składała się z 10 osobników.}
+	\end{center}
+\end{figure}
 
 \subsection{Adaptacyjna liczba cząstek}
 Oczywistym jest, że największy wpływ na złożoność obliczeniową filtra cząsteczkowego ma ilość cząstek. W \cite{adaptive} opisano algorytm który służy do dynamicznego zmieniania liczby cząstek. Polega on na zmodyfikowaniu kroku (e) podstawowego algorytmu, gdzie tuż przed próbkowaniem wyznacza się nową liczbę cząstek, korzystając z poniższego algorytmu.
