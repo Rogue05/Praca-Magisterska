@@ -191,6 +191,14 @@ public:
             y = h(gen);
         }while(!is_valid(x,y));
     }
+
+
+    virtual double get_sizeX() override{
+        return width;
+    }
+    virtual double get_sizeY() override{
+        return height;
+    }
 };
 
 
@@ -424,7 +432,7 @@ size_t get_new_N(
     std::shared_ptr<Map> map,
     py::array_t<robot_2d> a_pop,
     py::array_t<double> a_weights,
-    double meas, double alpha){
+    double meas, double alpha, double gamma){
     auto pop = a_pop.mutable_unchecked<1>();
     auto weights = a_weights.mutable_unchecked<1>();
 
@@ -455,8 +463,8 @@ size_t get_new_N(
     std::vector<std::pair<
         std::function<bool(int,int)>,
         double>> preds = {
-        {[&pop](int a, int b){return pop(a).x < pop(b).x;}, 0.1},
-        {[&pop](int a, int b){return pop(a).y < pop(b).y;}, 0.1},
+        {[&pop](int a, int b){return pop(a).x < pop(b).x;}, gamma},
+        {[&pop](int a, int b){return pop(a).y < pop(b).y;}, gamma},
         {[&pop](int a, int b){return pop(a).ori < pop(b).ori;}, 0.1},
         {[&pop](int a, int b){return pop(a).vel < pop(b).vel;}, 0.1},
     };
@@ -631,11 +639,24 @@ struct BoxParticleFilter{
         double mini = 10000, maxi = 0;
         for (int x = state.x.lower(); x < state.x.upper(); ++x){
             for (int y = state.y.lower(); y < state.y.upper(); ++y){
-                auto meas = map->get_meas(x, y, 0.0);
+                auto meas = map->get_meas(x, y, median(state.ori));
                 mini = std::min(mini, meas);
                 maxi = std::max(maxi, meas);
             }
         }
+        // double mini = 1000, maxi = 0;
+        // for (int x = state.x.lower(); x < state.x.upper(); ++x){
+        //     for (int y = state.y.lower(); y < state.y.upper(); ++y){
+        //         // py::print('y',y);
+        //         if (!map->is_valid(x,y)) continue;
+                
+        //         for (double ori = state.ori.lower(); ori < state.ori.upper(); ori+=0.01){
+        //             auto meas = map->get_meas(x, y, ori);
+        //             mini = std::min(mini, meas);
+        //             maxi = std::max(maxi, meas);
+        //         }
+        //     }
+        // }
         return intd(mini, maxi);
     }
 

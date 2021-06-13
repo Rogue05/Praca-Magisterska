@@ -60,17 +60,17 @@ for rct in patches:
 
 
 # real_state = pf.robot_2d(500, 500, np.pi/4, 10)
-# real_state = pf.robot_2d(100, 500, np.pi/4, 10)
-real_state = pf.robot_2d(100, 100, np.pi/4, 10)
+real_state = pf.robot_2d(100, 500, np.pi/4, 10)
+# real_state = pf.robot_2d(100, 100, np.pi/4, 10)
 
-# from noise import pnoise
-# # grid = pnoise(2**10,2**10,2**7)
-# grid = pnoise(2**11,2**11,2**8)
+from noise import pnoise
+# grid = pnoise(2**10,2**10,2**7)
+grid = pnoise(2**11,2**11,2**8)
 # print('minmax =',grid.max(),grid.min())
 
-grid = np.load('map.npy')
-grid /= grid.max()
-print('minmax =',grid.max(),grid.min())
+# grid = np.load('map.npy')
+# grid /= grid.max()
+# print('minmax =',grid.max(),grid.min())
 
 mapa = pf.HeightMap(grid)
 
@@ -112,7 +112,7 @@ for ind in range(300):
 		break
 
 	if np.isnan(effN):
-		# print('reinit')
+		print('reinit')
 		bpf.init_pop(pop_sqrt)
 		# print('done')
 		continue

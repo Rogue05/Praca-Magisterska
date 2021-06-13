@@ -22,6 +22,13 @@ mapa.add_circle(200,0,300)
 mapa.add_circle(200,700,100)
 mapa.add_circle(800,400,60)
 
+
+# plt.imshow(mapa.get_grid())
+# plt.show()
+# import sys
+# sys.exit()
+
+
 # model = pf.Model(mapa)
 pop = pf.get_random_pop(mapa,pop_size)
 weights = pf.get_uniform_weights(pop_size)
@@ -39,19 +46,19 @@ weights = pf.get_uniform_weights(pop_size)
 # # print(weights)
 # # print(pop)
 
-# plt.ion()
-# fig = plt.figure(figsize=(7,7))
-# plt.imshow(np.array(mapa.get_grid()).T, cmap='gray')
-# real_line, = plt.plot([],[],'.r',ms=15)
-# pop_line, = plt.plot(*pf.as_array(pop),'.b',alpha=0.01)
-# est_line, = plt.plot([],[],'.y',ms=15)
+plt.ion()
+fig = plt.figure(figsize=(7,7))
+plt.imshow(np.array(mapa.get_grid()).T, cmap='gray')
+real_line, = plt.plot([],[],'.r',ms=15)
+pop_line, = plt.plot(*pf.as_array(pop),'.b',alpha=0.01)
+est_line, = plt.plot([],[],'.y',ms=15)
 
-# plt.xlim([-1,1001])
-# plt.ylim([-1,1001])
-# plt.axis('equal')
-# plt.show()
-# fig.canvas.draw()
-# fig.canvas.flush_events()
+plt.xlim([-1,1001])
+plt.ylim([-1,1001])
+plt.axis('equal')
+plt.show()
+fig.canvas.draw()
+fig.canvas.flush_events()
 
 # Gen92
 # Hau11
@@ -61,10 +68,11 @@ diffy = []
 
 popss = [pop_size,]
 oriss = [real_state.ori,]
+neffs = []
 
 for i in range(1000):
-	# if not plt.fignum_exists(fig.number):
-	# 	break
+	if not plt.fignum_exists(fig.number):
+		break
 
 	pf.drift_state(mapa, real_state, 0.1, 0.0)
 	pf.drift_pop(mapa, pop, 0.1, 0.0, d_ori, d_vel)
@@ -90,9 +98,11 @@ for i in range(1000):
 		# exit()
 		# pop = pf.roulette_wheel_resample(pop, weights)
 		# print(len(pop))
-		alpha = 100
+		alpha = 100000
 		# # print("get N",flush=True)
 		# pop_size = pf.get_new_N(mapa, pop, weights, meas, alpha)
+		# print(pop_size)
+		neffs.append(pop_size)
 		# print('got new',flush=True)
 		popss.append(pop_size)
 		oriss.append(real_state.ori)
@@ -103,21 +113,32 @@ for i in range(1000):
 		# print('resampled',flush=True)
 		weights = pf.get_uniform_weights(pop_size)
 
-	# pop_line.set_data(*pf.as_array(pop))
-	# real_line.set_data(real_state.x,real_state.y)
-	# est_line.set_data(est_state.x,est_state.y)
+	pop_line.set_data(*pf.as_array(pop))
+	real_line.set_data(real_state.x,real_state.y)
+	est_line.set_data(est_state.x,est_state.y)
 
 	# if i % 10 != 1:
 	# 	continue
-	# fig.canvas.draw()
-	# fig.canvas.flush_events()
+	fig.canvas.draw()
+	fig.canvas.flush_events()
 
+# diff = np.sqrt(np.array(diffx)**2 + np.array(diffy)**2)/11
+# # plt.plot(diffx,diffy,'.')
+# # plt.axis('equal')
 
-plt.plot(diffx,diffy,'.')
-plt.axis('equal')
-# plt.figure()
-# plt.polar(oriss,popss,'.')
-plt.show()
+# plt.subplot(211)
+# plt.plot(diff)
+# plt.xlabel('t')
+# plt.ylabel('err/v')
+# # plt.figure()
+# plt.subplot(212)
+# plt.plot(neffs)
+# plt.xlabel('t')
+# plt.ylabel('N')
+# # plt.figure()
+# # plt.polar(oriss,popss,'.')
+# plt.tight_layout()
+# plt.show()
 
 
 # pop = model.get_linear_pop(map_size) # tak, ma byc map_size

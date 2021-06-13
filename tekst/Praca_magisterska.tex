@@ -1,0 +1,209 @@
+\documentclass[a4paper,onecolumn,oneside,12pt,extrafontsizes]{memoir}
+
+
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{setspace}
+\usepackage{tabularx}
+\usepackage{color,calc}
+\selectlanguage{polish}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\setcounter{secnumdepth}{4}
+\usepackage{caption}
+\usepackage{graphicx}
+\usepackage{picture}
+\usepackage{gensymb}
+\usepackage{listingsutf8}
+\lstset{language=Pascal}
+\usepackage{listings}
+
+\usepackage{ebgaramond}
+
+\usepackage{tgtermes}
+
+\usepackage{amsmath}  
+\usepackage{fixltx2e} 
+
+
+\clubpenalty=10000      %kara za sierotki
+\widowpenalty=10000  % nie pozostawiaj wdów
+\brokenpenalty=10000		% nie dziel wyrazów między stronami
+\exhyphenpenalty=999999		% nie dziel słów z myślnikiem
+\righthyphenmin=6			% dziel minimum 3 litery
+
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.35}
+
+\setlength{\headsep}{10pt} 
+\setlength{\headheight}{13.6pt}
+\setlength{\footskip}{\headsep+\headheight}
+\setlength{\uppermargin}{\headheight+\headsep+1cm}
+\setlength{\textheight}{\paperheight-\uppermargin-\footskip-1.5cm}
+\setlength{\textwidth}{\paperwidth-5cm}
+\setlength{\spinemargin}{2.5cm}
+\setlength{\foremargin}{2.5cm}
+\setlength{\marginparsep}{2mm}
+\setlength{\marginparwidth}{2.3mm}
+\checkandfixthelayout[fixed]
+
+%\linespread{1}
+\linespread{1.3}
+\setlength{\parindent}{14.5pt}
+
+
+\makeatletter
+\newcommand{\showFontSize}{\f@size pt} % makro wypisujące wielkość bieżącej czcionki
+\makeatother
+
+
+\captionnamefont{\small}
+\captiontitlefont{\small}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Definicja strony tytułowej 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\makeatletter
+%Uczelnia
+\newcommand\uczelnia[1]{\renewcommand\@uczelnia{#1}}
+\newcommand\@uczelnia{}
+%Wydział
+\newcommand\wydzial[1]{\renewcommand\@wydzial{#1}}
+\newcommand\@wydzial{}
+%Kierunek
+\newcommand\kierunek[1]{\renewcommand\@kierunek{#1}}
+\newcommand\@kierunek{}
+%Specjalność
+\newcommand\specjalnosc[1]{\renewcommand\@specjalnosc{#1}}
+\newcommand\@specjalnosc{}
+%Tytuł po angielsku
+\newcommand\titleEN[1]{\renewcommand\@titleEN{#1}}
+\newcommand\@titleEN{}
+%Tytuł krótki
+\newcommand\titleShort[1]{\renewcommand\@titleShort{#1}}
+\newcommand\@titleShort{}
+%Promotor
+\newcommand\promotor[1]{\renewcommand\@promotor{#1}}
+\newcommand\@promotor{}
+
+\usepackage[absolute]{textpos} % zamarkowano, bo ostatecznie wykorzystano otoczenie picture
+
+\def\maketitle{%
+	\pagestyle{empty}%
+	%%\garamond 
+	\fontfamily{\ebgaramond@family}\selectfont % na stronie tytułowej czcionka garamond
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+	%% Poniżej, w otoczniu picture, wstawiono tytuł i autora. 
+	%% Tytuł (z autorem) musi znaleźć się w obszarze 
+	%% odpowiadającym okienku 110mmx75mm, którego lewy górny róg 
+	%% jest w położeniu 77mm od lewej i 111mm od górnej  krawędzi strony 
+	%% (tak wynika z wycięcia na okładce). 
+	%% Poniższy kod musi być użyty dokładnie w miejscu gdzie jest.
+	%% Jeśli tytuł nie mieści się w okienku, to należy tak pozmieniać 
+	%% parametry użytych komend, aby ten przydługi tytuł jednak 
+	%% upakować go do okienka.
+	%%
+	%% Sama okładka (kolorowa strona z wycięciem, do pobrania z dydaktyki) 
+	%% powinna być przycięta o 3mm od każdej z krawędzi.
+	%% Te 3mm pewnie zostawiono na ewentualne spady czy też specjalną oprawę.
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+	\newlength{\tmpfboxrule}
+	\setlength{\tmpfboxrule}{\fboxrule}
+	\setlength{\fboxsep}{2mm}
+	\setlength{\fboxrule}{0mm} 
+	%\setlength{\fboxrule}{0.1mm} %% jeśli chcemy zobaczyć ramkę
+	\setlength{\unitlength}{1mm}
+	\begin{picture}(0,0)
+	\put(26,-124){\fbox{
+			\parbox[c][71mm][c]{104mm}{\centering 
+				{\fontsize{16pt}{18pt}\selectfont \@title}\\[5mm]
+				{\fontsize{16pt}{18pt}\selectfont \@titleEN}\\[20mm]
+				{\fontsize{16pt}{18pt}\selectfont AUTOR:}\\[2mm]
+				{\fontsize{14pt}{16pt}\selectfont \@author}}
+		}
+	}
+	\end{picture}
+	\setlength{\fboxrule}{\tmpfboxrule} 
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	%% Reszta strony z nazwą uczelni, wydziału, kierunkiem, specjalnością
+	%% promotorem, oceną pracy, miastem i rokiem
+	{\centering%\vspace{-1cm}
+		{\fontsize{22pt}{24pt}\selectfont \@uczelnia}\\[0.4cm]
+		{\fontsize{22pt}{24pt}\selectfont \@wydzial}\\[0.5cm]
+		\hrule %\vspace*{0.7cm}
+	}
+	{\flushleft\fontsize{14pt}{16pt}\selectfont%
+		\begin{tabular}{ll}
+			KIERUNEK: & \@kierunek\\
+			SPECJALNOŚĆ: & \@specjalnosc\\
+		\end{tabular}\\[1.3cm]
+	}
+	{\centering
+		{\fontsize{32pt}{36pt}\selectfont PRACA DYPLOMOWA}\\[0.5cm]
+		{\fontsize{32pt}{36pt}\selectfont MAGISTERSKA}\\[2.5cm]
+	}
+	\vfill
+	
+
+	\begin{tabularx}{\linewidth}{p{6cm}l}
+		&{\fontsize{16pt}{18pt}\selectfont PROWADZĄCY PRACĘ:}\\[2mm] %UWAGA: tutaj jest miejsce na nazwisko promotora pracy
+		&{\fontsize{14pt}{16pt}\selectfont \@promotor}\\[10mm]
+		&{\fontsize{16pt}{18pt}\selectfont OCENA PRACY:}\\[20mm]
+	\end{tabularx}
+
+	\vspace{2cm}
+	\hrule\vspace*{0.3cm}
+	{\centering
+		{\fontsize{16pt}{18pt}\selectfont \@date}\\[0cm]
+	}
+	%\ungaramond
+	\normalfont
+	\cleardoublepage
+}
+\makeatother
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Metadane dokumentu 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{Filtry cząsteczkowe i ich zastosowania w problemach wyznaczania lokalizacji}
+\titleEN{Particle filters for selected problems in positioning}
+\author{inż. Wojciech Sopot}
+\uczelnia{POLITECHNIKA WROCŁAWSKA}
+\wydzial{WYDZIAŁ ELEKTRONIKI}
+\kierunek{AUTOMATYKA I ROBOTYKA}
+\specjalnosc{SYSTEMY INFORMATYCZNE W AUTOMATYCE}
+\promotor{dr hab. inż. Paweł Wachel, K28W04D02}
+\date{WROCŁAW, 2021}
+
+
+% moje libki start
+
+\usepackage{tikz-cd}
+\usepackage{enumitem}
+
+\usepackage[ruled,vlined]{algorithm2e}
+%\usepackage[ruled]{algorithm2e}
+\renewcommand{\algorithmcfname}{Algorytm}
+
+% moje libki end
+\begin{document}
+	\maketitle
+	\tableofcontents	
+	\include{wprowadzenie}
+	\include{filtry_cząsteczkowe}
+	\include{wybrane_narzędzia_programistyczne}
+	\include{badania}
+	\include{wnioski}
+	
+	\newpage
+	\listoffigures
+%	\newpage
+%	\listoftables
+	
+	\bibliographystyle{plabbrv}
+	\bibliography{biblio}
+\end{document}
