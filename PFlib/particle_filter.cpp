@@ -51,7 +51,7 @@ struct Map{
 
 struct PrimitiveMap : public Map{
 private:
-    std::default_random_engine gen;
+    std::default_random_engine gen1, gen2;
 
     class CollObj{
     public:
@@ -120,7 +120,9 @@ private:
 
 public:
 
-    PrimitiveMap(double bound){
+    PrimitiveMap(double bound):
+            gen1(std::random_device()()),
+            gen2(std::random_device()()){
         width = bound;
         height = bound;
         add_line(-1.,0.,bound);
@@ -187,8 +189,8 @@ public:
         std::uniform_real_distribution<double> w(0.0,(double)width),
                                                 h(0.0,(double)height);
         do{
-            x = w(gen);
-            y = h(gen);
+            x = w(gen1);
+            y = h(gen2);
         }while(!is_valid(x,y));
     }
 
@@ -205,12 +207,14 @@ public:
 
 struct HeightMap : public Map{
 private:
-    std::default_random_engine gen;
+    std::default_random_engine gen1, gen2;
     std::vector<std::vector<double>> grid;
     double gmin, gmax;
 
 public:
-    HeightMap(const py::array_t<double>& grid_){
+    HeightMap(const py::array_t<double>& grid_):
+            gen1(std::random_device()()),
+            gen2(std::random_device()()){
         auto r = grid_.unchecked<2>();
         grid.resize(r.shape(0));
         for (auto& g:grid)
@@ -240,8 +244,8 @@ public:
         std::uniform_real_distribution<double> w(0.0,(double)grid.size()-1.), // TODO 100 bo hack
                                                 h(0.0,(double)grid[0].size()-1.);
         do{
-            x = w(gen);
-            y = h(gen);
+            x = w(gen1);
+            y = h(gen2);
         }while(!is_valid(x,y));
     
     }
@@ -330,13 +334,15 @@ void drift_pop(std::shared_ptr<Map> map,
     double var_ori, double var_vel){
     auto pop = a_pop.mutable_unchecked<1>();
 
-    std::default_random_engine gen;
+    std::random_device bese_gen;
+    std::default_random_engine gen1(bese_gen());
+    std::default_random_engine gen2(bese_gen());
     std::uniform_real_distribution<double> rand_ori(-var_ori,var_ori), 
                                             rand_vel(-var_vel,var_vel);
 
     for(size_t i=0; i < pop.shape(0); ++i){
-        pop(i).ori += rand_ori(gen);
-        pop(i).vel += rand_vel(gen);
+        pop(i).ori += rand_ori(gen1);
+        pop(i).vel += rand_vel(gen2);
         drift_state(map, pop(i), dori, dvel);
     }
 }
@@ -432,7 +438,7 @@ size_t get_new_N(
     std::shared_ptr<Map> map,
     py::array_t<robot_2d> a_pop,
     py::array_t<double> a_weights,
-    double meas, double alpha, double gamma){
+    double meas, double alpha, double gamma = 0.1){
     auto pop = a_pop.mutable_unchecked<1>();
     auto weights = a_weights.mutable_unchecked<1>();
 

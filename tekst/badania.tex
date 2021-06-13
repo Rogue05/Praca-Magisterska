@@ -1,14 +1,112 @@
 \chapter{Badania} \label{przeg}
-W tym rozdziale opisano przeprowadzone na kodzie badania. Zaczęto od opisania konkretnych problemów którymi się zajmowano, a następnie przeprowadzono badania mające potwierdzić czy algorytmy działają poprawnie
+W tym rozdziale opisano przeprowadzone na kodzie badania. Zaczęto od opisania konkretnych problemów którymi się zajmowano, a następnie przeprowadzono badania mające potwierdzić czy algorytmy działają poprawnie. Na koniec przebadano zachowanie zaimplementowane filtry pod różnymi kątami.
 \section{Opis poszczególnych problemów}
+W badaniach zajęto się dwoma problemami wyznaczania lokalizacji. Pierwszy polega na ustalenie pozycji robota na podstawie pomiaru odległości od ściany, drugi na ustalenie pozycji samolotu na podstawie pomiaru wysokości. W oby przypadkach znano mapę środowiska w którym się znajdowały.
+\subsection{Robot w pomieszczeniu} \label{robot_w_pomieszczeniu_desc}
+Stan robota w pomieszczeniu opisano czterema liczbami:
+\begin{equation*}
+	x = \{p_x,p_y,\theta,v\}
+\end{equation*}
+gdzie $p_x$ i $p_y$ to pozycja robota, $\theta$ jest jego orientacją, natomiast $v$ prędkością. Pomiar odległości od ściany był zawsze wykonywany w kierunku $\theta$, i był miał Gaussowski rozkład. Mapa jest kwadratowym pokojem o wymiarach $1000$ na $1000$ jednostek, wypełnionym kołami o różnych średnicach, oraz ograniczany prostymi. Na rysunku \ref{przykladowa_mapa_pokoju} przedstawiono przykładową mapę.\\
+O ile nie będzie napisane inaczej, robot zaczynał na środku mapy, miał prędkość 10 jednostek na iterację, i skręcał w lewo o $0.1rad$ na krok.
+\begin{figure}
+	\begin{center}
+		\includegraphics[width=10cm]{./przykladowa_mapa_pokoju.png}
+		\caption{Przykładowa mapa pokoju}
+		\label{przykladowa_mapa_pokoju}
+	\end{center}
+\end{figure}
+\subsection{Samolot w locie}
+Stan samolotu opisano tak samo jak stan robota w rozdziale \ref{robot_w_pomieszczeniu_desc}:
+\begin{equation*}
+	x = \{p_x,p_y,\theta,v\}
+\end{equation*}
+Mapa jest natomiast mapą wysokościową, w tym przypadku zdecydowano się na dwa warianty, pierwszy jest mapą fragmentu Wrocławia (przykład widoczny na rysunku \ref{przykladowa_mapa_wroclawia}), natomiast drugą wygenerowano jako szum, którego zmienność można kontrolować (przykład widoczny na rysunku \ref{przykladowa_mapa_szumu}).\\
+O ile nie będzie napisane inaczej, samolot w lewym dolnym rogu mapy, miał prędkość 10 jednostek na iterację, i nie zmieniał orientacji $\theta=\frac{\pi}{4}$.
+\begin{figure}
+	\begin{center}
+		\includegraphics[width=10cm]{./przykladowa_mapa_wroclawia.png}
+		\caption{Przykładowa mapa wysokościowa fragmentu Wrocławia}
+		\label{przykladowa_mapa_wroclawia}
+	\end{center}
+\end{figure}
+\begin{figure}
+\begin{center}
+	\includegraphics[width=10cm]{./przykladowa_mapa_szumu.png}
+	\caption{Przykładowa mapa wysokościowa uzyskana z szumu}
+	\label{przykladowa_mapa_szumu}
+\end{center}
+\end{figure}
+
 \section{Badania poprawności działania}
-Sprawdzenie czy spełnione sa warunki brzegowe
+W tym rozdziale zajęto się badaniami mającymi potwierdzić poprawne działanie zaimplementowanego rozwiązania. Na początku sprawdzono, jak zmiana generatora liczb losowych wpłynęła na wyniki, następnie sprawdzono, jak poradzi sobie algorytm przy braku punktów odniesienia, potem co się dzieje przy braku ewolucji systemu ($v=0$), a na koniec jak filtr radzi sobie z całkowicie losowymi pomiarami. Nie skupiano się no konkretnych wartościach liczbowych, jedynie wizualnie oceniano wyniki.
+
 \subsection{Wpływ generatora}
-mam nadzieję, że będzie tak samo XD
-\subsection{Brak pkt odniesienia}
-wiele równoważnych położeń
+Przebadano trzy generatory wbudowane w język C++: domyślny linear congruential generator(LCG) \cite{lcg_wiki}, Mersenne Twister \cite{mersenne_wiki} oraz wbudowany niedeterministyczny generator. Populacja cząstek wynosiła $N=1000$. Wyniki rysowano po 1, 11 i 21 iteracjach filtra(nr iteracji oznaczano jako $k$). Wyniki przedstawiono na rysunkach \ref{lcg_example}, \ref{mersenne_example}, \ref{device_example}. Jak widać dla wszystkich generatorów wyniki są niemal takie same, i zbiegają do faktycznego położenia robota. Ponieważ dla każdego generatora uzyskano poprawne wyniki, w dalszych badaniach korzystano z generatora LCG ponieważ jest najprostszy, i, co za tym idzie, najszybszy.
+
+\begin{figure}
+	\begin{center}
+		\includegraphics[width=15cm]{./lcg_example.png}
+		\caption{Przykładowe wyniki dla generatora LCG}
+		\label{lcg_example}
+	\end{center}
+\end{figure}
+
+\begin{figure}
+	\begin{center}
+		\includegraphics[width=15cm]{./mersenne_example.png}
+		\caption{Przykładowe wyniki dla generatora Mersenne Twister}
+		\label{mersenne_example}
+	\end{center}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+	\includegraphics[width=15cm]{./device_example.png}
+	\caption{Przykładowe wyniki dla niedeterministycznego generatora}
+	\label{device_example}
+\end{center}
+\end{figure}
+
+
+\subsection{Niejednoznaczna mapa}
+W tym przypadku zbadano jak zachowa się filtr przy braku punktów odniesienia. W kwadratowym pokoju, powinno to spowodować pojawienie się czterech równie prawdopodobnych pozycji. Jak widać przewidywania potwierdziły się na rysunku \ref{no_pivot}. Na rysunku \ref{one_pivot} przedstawiono sytuację, gdy mapa dopuszcza dwie możliwe pozycja. Badania przeprowadzono przy populacji $N=10000$ cząstek.
+
+\begin{figure}
+	\begin{center}
+		\includegraphics[width=15cm]{./no_pivot.png}
+		\caption{Przykładowe wyniki przy braku punktu odniesienia}
+		\label{no_pivot}
+	\end{center}
+\end{figure}
+
+\begin{figure}
+	\begin{center}
+		\includegraphics[width=15cm]{./one_pivot.png}
+		\caption{Przykładowe wyniki przy dwóch możliwych położeniach}
+		\label{one_pivot}
+	\end{center}
+\end{figure}
+
 \subsection{Brak ewolucji systemu}
-Powinny się pojawić izolinie.
+Tutaj Zbadano, co się dzieje, gdy system nie ewoluuje. Spodziewano się, pojawią się izohipsy, przynajmniej na początku, nim populacja nie stanie się zbyt zdegenerowana. Badania przeprowadzono dla populacji o rozmiarze $N=100000$. Jak widać na rysunkach \ref{stationary} i \ref{stationary_plane} przewidywania się spełniły, dodatkowo dla rysunku \ref{stationary_plane} dobrze widać pojawianie się degeneracji.
+
+\begin{figure}
+	\begin{center}
+		\includegraphics[width=15cm]{./stationary.png}
+		\caption{Przykładowe wyniki przy braku ewolucji systemu, dla robota w pokoju}
+		\label{stationary}
+	\end{center}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+	\includegraphics[width=15cm]{./stationary_plane.png}
+	\caption{Przykładowe wyniki przy braku ewolucji systemu, dla samolotu}
+	\label{stationary_plane}
+\end{center}
+\end{figure}
+
 \subsection{Pomiary bez związku}
 powinien pozostać jednostajny szum
 

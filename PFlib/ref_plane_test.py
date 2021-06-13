@@ -55,8 +55,9 @@ for i in range(300):
 
 	print('      r',i,real_state.x,real_state.y,real_state.ori,real_state.vel)
 
-	# meas = model.get_meas(real_state)
-	meas = mapa.get_meas(real_state.x,real_state.y,real_state.ori)
+	# # meas = model.get_meas(real_state)
+	# meas = mapa.get_meas(real_state.x,real_state.y,real_state.ori)
+	meas = np.random.uniform(0,1)
 	weights = pf.update_weights(mapa, meas, pop, weights)
 
 	print(i,'square sum',(weights**2).sum())
@@ -74,8 +75,8 @@ for i in range(300):
 	if effN < 0.8*pop_size:
 		print('resample',effN,pop_size)
 
-		alpha = 100
-		pop_size = pf.get_new_N(mapa, pop, weights, meas, alpha)
+		# alpha = 100
+		# pop_size = pf.get_new_N(mapa, pop, weights, meas, alpha)
 		# print('Done-',flush=True)
 		
 		pop = pf.roulette_wheel_resample(pop, weights, pop_size)

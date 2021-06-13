@@ -16,11 +16,11 @@ real_state = pf.robot_2d(500, 500, 0, 11)
 
 mapa = pf.PrimitiveMap(map_size)
 
-mapa.add_line(-1,1,800)
-mapa.add_circle(1000,1000,300)
-mapa.add_circle(200,0,300)
-mapa.add_circle(200,700,100)
-mapa.add_circle(800,400,60)
+# mapa.add_line(-1,1,800)
+# mapa.add_circle(1000,1000,300)
+# mapa.add_circle(200,0,300)
+# mapa.add_circle(200,700,100)
+# mapa.add_circle(800,400,60)
 
 
 # plt.imshow(mapa.get_grid())
@@ -45,6 +45,7 @@ weights = pf.get_uniform_weights(pop_size)
 # # pop = pf.sus_resample(pop, weights)
 # # print(weights)
 # # print(pop)
+
 
 plt.ion()
 fig = plt.figure(figsize=(7,7))
@@ -76,6 +77,8 @@ for i in range(1000):
 
 	pf.drift_state(mapa, real_state, 0.1, 0.0)
 	pf.drift_pop(mapa, pop, 0.1, 0.0, d_ori, d_vel)
+	# pf.drift_state(mapa, real_state, 0.1, 0.0)
+	# pf.drift_pop(mapa, pop, 0.1, 0.0, d_ori, d_vel)
 
 	# pf.regularize(pop, 0.1, 0.0, 0.0)
 
