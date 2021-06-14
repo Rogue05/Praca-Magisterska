@@ -491,7 +491,8 @@ size_t get_new_N(
         // py::print(zeta);
     }
 
-    size_t Nmax = 10000, Nmin = 100, newN = 0;
+    // size_t Nmax = 10000, Nmin = 100, newN = 0;
+    size_t Nmax = 1000, Nmin = 100, newN = 0;
     // py::print(std::min_element(zeta.begin(), zeta.end()),
     //     std::max_element(zeta.begin(), zeta.end()));
     if (std::all_of(zeta.begin(), zeta.end(), [&alpha](double e){return e>alpha;}))
@@ -575,19 +576,22 @@ py::array sus_resample(py::array a_pop, py::array_t<double> a_weights,
     return a_new_pop;
 }
 
-void regularize(py::array_t<robot_2d> a_pop,
+void regularize(py::array_t<robot_2d> a_pop, double mutation_prob,
     double stdx, double stdori, double stdvel){
     auto pop = a_pop.mutable_unchecked<1>();
 
-    std::default_random_engine gen1, gen2;
+    std::default_random_engine gen1, gen2, gen3;
     std::normal_distribution<double>
         dx(.0, stdx), dori(.0, stdori), dvel(.0, stdvel);
+    std::uniform_real_distribution<double> mut(0.0,1.0);
 
     for (size_t i=0; i < pop.shape(0); ++i){
-        pop(i).x += dx(gen1);
-        pop(i).y += dx(gen2);
-        pop(i).ori += dori(gen2);
-        pop(i).vel += dvel(gen2);
+        if (mutation_prob > mut(gen3)){
+            pop(i).x += dx(gen1);
+            pop(i).y += dx(gen2);
+            pop(i).ori += dori(gen2);
+            pop(i).vel += dvel(gen2);
+        }
     }
 }
 
@@ -615,18 +619,29 @@ struct robot_2di{
         vel(velmin, velmax){}
 
     std::vector<robot_2di> split(size_t N, int axis){
+        // static std::default_random_engine gen(std::random_device()());
+        static std::default_random_engine gen;
+        static std::uniform_real_distribution<double> divp(0.0, 1.0);
         std::vector<robot_2di> ret;
         for (size_t i=0;i<N;++i){
             ret.push_back(*this);
-            if (width(x) > width(y))
-                ret[i].x =
-                    (x-x.lower())/double(N) +
-                    x.lower() +
-                    width(x)*i/N;
-            else
-                ret[i].y = (y-y.lower())/double(N) +
-                    y.lower() +
-                    width(y)*i/N;
+            if (divp(gen)<0.8){
+                if (width(x) > width(y))
+                    ret[i].x =
+                        (x-x.lower())/double(N) +
+                        x.lower() +
+                        width(x)*i/N;
+                else
+                    ret[i].y = (y-y.lower())/double(N) +
+                        y.lower() +
+                        width(y)*i/N;
+                }
+            else{
+                ret[i].ori =
+                        (ori-ori.lower())/double(N) +
+                        ori.lower() +
+                        width(ori)*i/N;
+            }
         }
         return ret;
     }
@@ -827,6 +842,7 @@ struct BoxParticleFilter{
         axis+=1;
         for (size_t i = 0; i < weights.size(); ++i)
             weights[i] = 1.0/weights.size();
+        py::print("-----done");
     }
 };
 

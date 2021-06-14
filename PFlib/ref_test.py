@@ -16,11 +16,11 @@ real_state = pf.robot_2d(500, 500, 0, 11)
 
 mapa = pf.PrimitiveMap(map_size)
 
-# mapa.add_line(-1,1,800)
-# mapa.add_circle(1000,1000,300)
-# mapa.add_circle(200,0,300)
-# mapa.add_circle(200,700,100)
-# mapa.add_circle(800,400,60)
+mapa.add_line(-1,1,800)
+mapa.add_circle(1000,1000,300)
+mapa.add_circle(200,0,300)
+mapa.add_circle(200,700,100)
+mapa.add_circle(800,400,60)
 
 
 # plt.imshow(mapa.get_grid())
@@ -32,6 +32,8 @@ mapa = pf.PrimitiveMap(map_size)
 # model = pf.Model(mapa)
 pop = pf.get_random_pop(mapa,pop_size)
 weights = pf.get_uniform_weights(pop_size)
+
+
 
 #================================
 

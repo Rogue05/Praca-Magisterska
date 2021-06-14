@@ -14,11 +14,11 @@
 \setcounter{secnumdepth}{4}
 \usepackage{caption}
 \usepackage{graphicx}
-\usepackage{picture}
-\usepackage{gensymb}
-\usepackage{listingsutf8}
-\lstset{language=Pascal}
-\usepackage{listings}
+%\usepackage{picture}
+%\usepackage{gensymb}
+%\usepackage{listingsutf8}
+%\lstset{language=Pascal}
+%\usepackage{listings}
 
 \usepackage{ebgaramond}
 
@@ -176,7 +176,7 @@
 \wydzial{WYDZIAŁ ELEKTRONIKI}
 \kierunek{AUTOMATYKA I ROBOTYKA}
 \specjalnosc{SYSTEMY INFORMATYCZNE W AUTOMATYCE}
-\promotor{dr hab. inż. Paweł Wachel, K28W04D02}
+\promotor{dr hab. inż. Paweł Wachel, K$28$W$04$D$02$}
 \date{WROCŁAW, 2021}
 
 
@@ -189,9 +189,13 @@
 %\usepackage[ruled]{algorithm2e}
 \renewcommand{\algorithmcfname}{Algorytm}
 
+\setcounter{secnumdepth}{5}
+\setcounter{tocdepth}{5}
+\usepackage{float}
 % moje libki end
 \begin{document}
 	\maketitle
+	\pagestyle{plain}
 	\tableofcontents	
 	\include{wprowadzenie}
 	\include{filtry_cząsteczkowe}

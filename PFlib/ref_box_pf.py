@@ -47,7 +47,7 @@ pop_size = pop_sqrt**2
 d_vel = 0.1
 d_ori = 0.01
 
-patches = list([pat.Rectangle((0,0),0,0,fill=False,color='y') for _ in range(pop_size)])
+patches = list([pat.Rectangle((0,0),0,0,fill=False,color='b') for _ in range(pop_size)])
 
 for rct in patches:
 	plt.gca().add_patch(rct)
@@ -85,8 +85,8 @@ plt.xlim([-1,grid.shape[0]+1])
 plt.ylim([-1,grid.shape[1]+1])
 plt.xlabel('x')
 plt.ylabel('y')
-realpos, = plt.plot(real_state.x,real_state.y,'g')
-estpos, = plt.plot(real_state.x,real_state.y,'r')
+realpos, = plt.plot(real_state.x,real_state.y,'r')
+estpos, = plt.plot(real_state.x,real_state.y,'y')
 plt.ion()
 plt.show()
 
@@ -100,25 +100,28 @@ tmp = 0
 for ind in range(300):
 	real_state.x = real_state.x + np.cos(real_state.ori)*real_state.vel
 	real_state.y = real_state.y + np.sin(real_state.ori)*real_state.vel
+	print('    drifting', bpf.get_coeff(),flush=True)
 	bpf.drift(0.0,0.0)
+	print('    drifted', bpf.get_coeff(),flush=True)
 	meas = mapa.get_meas(real_state.x,real_state.y,real_state.ori)
 	effN = bpf.update_weights(meas, 0.01)
 
-	print('    paving', bpf.get_coeff())
+	print('    paving', bpf.get_coeff(),flush=True)
 
 
 	if real_state.x >= grid.shape[0] or\
 		real_state.y >= grid.shape[1]:
+		print('break',flush=True)
 		break
 
 	if np.isnan(effN):
-		print('reinit')
+		print('reinit',flush=True)
 		bpf.init_pop(pop_sqrt)
 		# print('done')
 		continue
 
 	est = bpf.get_est()
-	print(ind, 'effN',effN, est, real_state.x, real_state.y)
+	print(ind, 'effN',effN, est, real_state.x, real_state.y,flush=True)
 	# est = bpf.get_est()
 	# if effN < 0.5*pop_size or ind%10==9:
 	tmp+=1
@@ -126,8 +129,9 @@ for ind in range(300):
 	if effN < 0.5*pop_size:
 		tmp=0
 		cnt+=1
-		print('           resample',cnt%4)
+		print('           resample',cnt%4,flush=True)
 		bpf.resample()
+		print('           resampled',flush=True)
 
 
 
