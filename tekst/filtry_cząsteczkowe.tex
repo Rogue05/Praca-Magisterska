@@ -169,6 +169,14 @@ W tym podejściu zaproponowanym w \cite{bpf_base} i udoskonalonym w \cite{brbpf}
 		\hat{x_k} = \sum_{i=0}^{N} w_{k,i} C_{k,i}
 	\end{equation}
 	gdzie $C_{k,i}$ jest centrum $i$-tej cząstki w $k$-tej iteracji.
+	\item Przed próbkowaniem można sprawdzić, czy cząstki nie nachodzą na siebie nawzajem za bardzo. Robi się to korzystając ze wzoru
+	\begin{equation}
+		\begin{aligned}
+			\theta = \sqrt{\frac{\sum_{i=0}^{N}|[x_{k,i}]|}{N |P_{union}|}}
+		\end{aligned}
+	\end{equation}
+	gdzie $P_{union}$ jest najmniejszym interwałem który zawiera wszystkie interwały $[x_{k,i}]$. Gdy $\theta$ jest większe niż pewien próg, populacja jest inicjalizowana na nowo równomiernie dzieląc $P_{union}$.
+	
 	\item Ponowne próbkowanie przebiega zupełnie inaczej niż w kroku \ref{resampling_step} podstawowego. Sam moment ponownego próbkowania można nadal dobierać według wzoru \ref{neff_form}. Próbkowanie zostaje zastąpione podziałem wybranych cząstek. Dla przykładu, gdy dana cząstka po próbkowaniu powinna być wzięta pięć razy, zostaje ona pięć razy podzielona wzdłuż najdłuższego wymiaru (może też być dzielona wzdłuż losowo wybranego interwału).
 	\item Jednym z najważniejszych usprawnień zaproponowanych w \cite{brbpf} jest reinicjalizacja cząstek, w przypadku gdy suma wag spadnie do zera. Jest to konieczne, ponieważ w takim przypadku niemożliwe staje się próbkowanie.
 \end{itemize}

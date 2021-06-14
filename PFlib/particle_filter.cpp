@@ -618,14 +618,14 @@ struct robot_2di{
         ori(orimin, orimax),
         vel(velmin, velmax){}
 
-    std::vector<robot_2di> split(size_t N, int axis){
+    std::vector<robot_2di> split(size_t N, double level = 0.8){
         // static std::default_random_engine gen(std::random_device()());
         static std::default_random_engine gen;
         static std::uniform_real_distribution<double> divp(0.0, 1.0);
         std::vector<robot_2di> ret;
         for (size_t i=0;i<N;++i){
             ret.push_back(*this);
-            if (divp(gen)<0.8){
+            if (divp(gen)<level){
                 if (width(x) > width(y))
                     ret[i].x =
                         (x-x.lower())/double(N) +
@@ -721,6 +721,54 @@ struct BoxParticleFilter{
         }
     }
 
+    void reinit_pop(){
+
+        double minx = map->get_sizeX(), maxx = 0;
+        double miny = map->get_sizeY(), maxy = 0;
+        double minori = 1.0e9, maxori = -1.0e9;
+        double minvel = 1.0e9, maxvel = -1.0e9;
+
+        // for(const auto& p:pop){
+        for(size_t i = 0; i < pop.size(); ++i){
+            const auto& p = pop[i];
+            minx = std::min(p.x.lower(),minx);
+            maxx = std::max(p.x.upper(),maxx);
+
+            miny = std::min(p.y.lower(),miny);
+            maxy = std::max(p.y.upper(),maxy);
+
+            minori = std::min(p.ori.lower(),minori);
+            maxori = std::max(p.ori.upper(),maxori);
+
+            minvel = std::min(p.vel.lower(),minvel);
+            maxvel = std::max(p.vel.upper(),maxvel);
+            weights[i] = 1.0/pop.size();
+        }
+
+        py::print(__func__,
+            minx,maxx,
+            miny,maxy,
+            minori,maxori,
+            minvel,maxvel);
+
+        auto bb = robot_2di(minx, maxx,
+                            miny, maxy,
+                            minori, maxori,
+                            minvel, maxvel);
+
+        size_t sqrtN = (size_t)std::sqrt(pop.size());
+        auto tmp_pop = bb.split(sqrtN, 1.0);
+
+        std::vector<robot_2di> new_pop;
+        for(auto p:tmp_pop){
+            auto new_ints = p.split(sqrtN, 1.0);
+            new_pop.insert(new_pop.end(),
+                new_ints.begin(),
+                new_ints.end());
+        }
+        pop = new_pop;
+    }
+
     double get_coeff(){
         intd x, y;
         double sum;
@@ -793,7 +841,7 @@ struct BoxParticleFilter{
         // ret(2) = ori;
         // ret(3) = vel;
         ret(2) = vel;
-        py::print(__func__,x,y,sum);
+        // py::print(__func__,x,y,sum);
         return a_ret;
     }
 
@@ -810,7 +858,7 @@ struct BoxParticleFilter{
         size_t j = 0;
 
         size_t counter = 0, ind = 0, cumsum = 0;
-        py::print("stats:",j,init, step, sum);
+        // py::print("stats:",j,init, step, sum);
 
         std::vector<size_t> inds;
         for (size_t i=0; i < pop.size(); ++i){
@@ -830,19 +878,19 @@ struct BoxParticleFilter{
                 inds.end(),
                 i);
             if (counter==0) continue;
-            auto new_ints = pop[i].split(counter, axis);
+            auto new_ints = pop[i].split(counter);
             new_pop.insert(new_pop.end(),
                 new_ints.begin(),
                 new_ints.end());
         }
 
-        py::print("new size:",new_pop.size(),counter,j,weights[j]);
+        // py::print("new size:",new_pop.size(),counter,j,weights[j]);
         pop = new_pop;
 
         axis+=1;
         for (size_t i = 0; i < weights.size(); ++i)
             weights[i] = 1.0/weights.size();
-        py::print("-----done");
+        // py::print("-----done");
     }
 };
 
@@ -880,6 +928,7 @@ PYBIND11_MODULE(PFlib, m){
     py::class_<BoxParticleFilter>(m,"BoxParticleFilter")
         .def(py::init<std::shared_ptr<Map>>())
         .def("init_pop",&BoxParticleFilter::init_pop)
+        .def("reinit_pop",&BoxParticleFilter::reinit_pop)
         .def("update_weights",&BoxParticleFilter::update_weights)
         .def("drift",&BoxParticleFilter::drift)
         .def("get_est",&BoxParticleFilter::get_est)

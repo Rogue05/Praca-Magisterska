@@ -47,7 +47,7 @@ pop_size = pop_sqrt**2
 d_vel = 0.1
 d_ori = 0.01
 
-patches = list([pat.Rectangle((0,0),0,0,fill=False,color='b') for _ in range(pop_size)])
+patches = list([pat.Rectangle((0,0),0,0,fill=False,color='y') for _ in range(pop_size)])
 
 for rct in patches:
 	plt.gca().add_patch(rct)
@@ -58,21 +58,20 @@ for rct in patches:
 # 			p[1]-p[0],p[3]-p[2],fill=False,color='r')
 # 		plt.gca().add_patch(rct)
 
+map_size = 1000
 
 # real_state = pf.robot_2d(500, 500, np.pi/4, 10)
-real_state = pf.robot_2d(100, 500, np.pi/4, 10)
-# real_state = pf.robot_2d(100, 100, np.pi/4, 10)
+# real_state = pf.robot_2d(100, 500, np.pi/4, 10)
+real_state = pf.robot_2d(map_size//2, map_size//2, np.pi/4, 10)
 
-from noise import pnoise
-# grid = pnoise(2**10,2**10,2**7)
-grid = pnoise(2**11,2**11,2**8)
-# print('minmax =',grid.max(),grid.min())
-
-# grid = np.load('map.npy')
-# grid /= grid.max()
-# print('minmax =',grid.max(),grid.min())
-
-mapa = pf.HeightMap(grid)
+# mapa = pf.HeightMap(grid)
+mapa = pf.PrimitiveMap(map_size)
+mapa.add_line(-1,1,800)
+mapa.add_circle(1000,1000,300)
+mapa.add_circle(200,0,300)
+mapa.add_circle(200,700,100)
+mapa.add_circle(800,400,60)
+grid = np.array(mapa.get_grid())
 
 bpf = pf.BoxParticleFilter(mapa)
 bpf.init_pop(pop_sqrt)
@@ -85,8 +84,8 @@ plt.xlim([-1,grid.shape[0]+1])
 plt.ylim([-1,grid.shape[1]+1])
 plt.xlabel('x')
 plt.ylabel('y')
-realpos, = plt.plot(real_state.x,real_state.y,'r')
-estpos, = plt.plot(real_state.x,real_state.y,'y')
+realpos, = plt.plot(real_state.x,real_state.y,'g')
+estpos, = plt.plot(real_state.x,real_state.y,'r')
 plt.ion()
 plt.show()
 
@@ -97,31 +96,37 @@ errx, erry = [], []
 
 cnt = 0
 tmp = 0
+
+
+ending = False
 for ind in range(300):
+	real_state.ori += 0.1
 	real_state.x = real_state.x + np.cos(real_state.ori)*real_state.vel
 	real_state.y = real_state.y + np.sin(real_state.ori)*real_state.vel
-	print('    drifting', bpf.get_coeff(),flush=True)
-	bpf.drift(0.0,0.0)
-	print('    drifted', bpf.get_coeff(),flush=True)
+	bpf.drift(0.1,0.0)
 	meas = mapa.get_meas(real_state.x,real_state.y,real_state.ori)
 	effN = bpf.update_weights(meas, 0.01)
 
-	print('    paving', bpf.get_coeff(),flush=True)
+	coeff = bpf.get_coeff()
+	print(ind,'    paving', coeff)
 
+	if coeff > 0.04:
+		bpf.reinit_pop()
+		continue
+		ending = True
 
 	if real_state.x >= grid.shape[0] or\
 		real_state.y >= grid.shape[1]:
-		print('break',flush=True)
 		break
 
 	if np.isnan(effN):
-		print('reinit',flush=True)
+		# print('reinit')
 		bpf.init_pop(pop_sqrt)
 		# print('done')
 		continue
 
 	est = bpf.get_est()
-	print(ind, 'effN',effN, est, real_state.x, real_state.y,flush=True)
+	# print(ind, 'effN',effN, est, real_state.x, real_state.y)
 	# est = bpf.get_est()
 	# if effN < 0.5*pop_size or ind%10==9:
 	tmp+=1
@@ -129,7 +134,7 @@ for ind in range(300):
 	if effN < 0.5*pop_size:
 		tmp=0
 		cnt+=1
-		print('           resample',cnt%4,flush=True)
+		# print('           resample',cnt%4)
 		bpf.resample()
 
 
@@ -139,7 +144,7 @@ for ind in range(300):
 
 	rx.append(real_state.x);ry.append(real_state.y);
 	realpos.set_data(rx, ry)
-	if ind > 10:
+	if ind >= 0:
 		ex.append(est[0]);ey.append(est[1]);
 		estpos.set_data(ex, ey)
 
