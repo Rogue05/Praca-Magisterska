@@ -16,7 +16,7 @@ O ile nie będzie napisane inaczej, robot zaczynał na środku mapy, miał pręd
 		\label{przykladowa_mapa_pokoju}
 	\end{center}
 \end{figure}
-\subsection{Samolot w locie}
+\subsection{Samolot w locie} \label{samolot_w_locie_chap}
 Stan samolotu opisano tak samo jak stan robota w rozdziale \ref{robot_w_pomieszczeniu_desc}:
 \begin{equation*}
 	x = \{p_x,p_y,\theta,v\}
@@ -39,9 +39,7 @@ O ile nie będzie napisane inaczej, samolot w lewym dolnym rogu mapy, miał prę
 \end{figure}
 
 \section{Badania poprawności działania}
-W tym rozdziale zajęto się badaniami mającymi potwierdzić poprawne działanie zaimplementowanego rozwiązania. Na początku sprawdzono, jak zmiana generatora liczb losowych wpłynęła na wyniki, następnie sprawdzono, jak poradzi sobie algorytm przy braku punktów odniesienia, potem co się dzieje przy braku ewolucji systemu ($v=0$),
-%a na koniec jak filtr radzi sobie z całkowicie losowymi pomiarami.
-Nie skupiano się no konkretnych wartościach liczbowych, jedynie wizualnie oceniano wyniki.
+W tym rozdziale zajęto się badaniami mającymi potwierdzić poprawne działanie zaimplementowanego rozwiązania. Na początku sprawdzono, jak zmiana generatora liczb losowych wpłynęła na wyniki, następnie sprawdzono, jak poradzi sobie algorytm przy braku punktów odniesienia, potem co się dzieje przy braku ewolucji systemu ($v=0$). Nie skupiano się no konkretnych wartościach liczbowych, jedynie wizualnie oceniano wyniki.
 
 \subsection{Wpływ generatora}
 Przebadano trzy generatory wbudowane w język C++: domyślny linear congruential generator(LCG) \cite{lcg_wiki}, Mersenne Twister \cite{mersenne_wiki} oraz wbudowany niedeterministyczny generator. Populacja cząstek wynosiła $N=1000$. Wyniki rysowano po 1, 11 i 21 iteracjach filtra(nr iteracji oznaczano jako $k$). Wyniki przedstawiono na rysunkach \ref{lcg_example}, \ref{mersenne_example}, \ref{device_example}. Jak widać dla wszystkich generatorów wyniki są niemal takie same, i zbiegają do faktycznego położenia robota. Ponieważ dla każdego generatora uzyskano poprawne wyniki, w dalszych badaniach korzystano z generatora LCG ponieważ jest najprostszy, i, co za tym idzie, najszybszy.
@@ -153,8 +151,8 @@ Zbadano wpływ liczby cząstek na jakość estymacji. Badania przeprowadzono dla
 	\end{center}
 \end{figure}
 
-\section{Wpływ szumu}
-
+\section{Wpływ szumu} \label{noise_chapter}
+W tym rozdziale zbadano wpływ szumu na jakość estymacji. Przebadano trzy rodzaje zaszumienia: zaszumienie pobieranego pomiaru (rysunek \ref{wplyw_szumu}), zaszumienie sterowania (kąta o jaki robot skręca, rysunek \ref{wplyw_szumu_ori}), oraz zbadano problem gdy pojawia się błąd systematyczny, stały dla każdej iteracji (rysunek \ref{blad_staly}). Jak widać, zaszumienie pomiaru da się skompensować, przynajmniej dopóki nie przekroczy ono około 20\% wartości pomiaru, zaś, jeśli chodzi o systematyczny błąd, próg ten wynosi około 10\%. W przypadku zaszumienia sygnału sterującego kątem robota, filtr jest w stanie z powodzeniem kompensować szum na poziome 30\%.
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=12cm]{./wplyw_szumu.png}
@@ -162,18 +160,19 @@ Zbadano wpływ liczby cząstek na jakość estymacji. Badania przeprowadzono dla
 		\label{wplyw_szumu}
 	\end{center}
 \end{figure}
+
 \begin{figure}[H]
-\begin{center}
-	\includegraphics[width=12cm]{./wplyw_szumu_ori.png}
-	\caption{Wpływ zaszumienia odczytu zmiany orientacji na jakość estymacji dla robota w pokoju.}
-	\label{wplyw_szumu_ori}
-\end{center}
+	\begin{center}
+		\includegraphics[width=12cm]{./wplyw_szumu_ori.png}
+		\caption{Wpływ zaszumienia odczytu zmiany orientacji na jakość estymacji dla robota w pokoju.}
+		\label{wplyw_szumu_ori}
+	\end{center}
 \end{figure}
 
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=12cm]{./blad_staly.png}
-		\caption{Wpływ pojawienia się błędu stałego na jakość estymacji dla robota w pokoju.}
+		\caption{Wpływ pojawienia się systematycznego błędu pomiaru na jakość estymacji dla robota w pokoju.}
 		\label{blad_staly}
 	\end{center}
 \end{figure}
@@ -191,7 +190,7 @@ Przebadano dwie metody próbkowania: najpopularniejszy stochastic universal samp
 
 
 \section{Skuteczność w poprawianiu błędnie określonego położenia}
-Sprawdzono zachowanie filtra w sytuacji, gdy w jakiś sposób nie poradzi sobie o określeniem położenia, i zgubi się. Wyniki widać na rysunku \ref{lost}. Można zaobserwować, iż algorytm jest w stanie "odszukać" faktyczny stan, jednak jest to bardziej kwestia szczęścia. Podejście opisane w rozdziale \ref{evol_chap} jest w stanie delikatnie poprawić rozwiązanie, jednak nie jest ono tak skuteczne jak przeszukanie od nowa całej przestrzeni stanów jak to się robi w przypadku algorytmu opisanego w rozdziale \ref{bpf_chapter}.
+Sprawdzono zachowanie filtra w sytuacji, gdy w jakiś sposób nie poradzi sobie o określeniem położenia, i zgubi się. Wyniki widać na rysunku \ref{lost}. Można zaobserwować, iż algorytm jest w stanie odszukać faktyczny stan, jednak jest to bardziej kwestia szczęścia. Podejście opisane w rozdziale \ref{evol_chap} jest w stanie delikatnie poprawić rozwiązanie, jednak nie jest ono tak skuteczne jak przeszukanie od nowa całej przestrzeni stanów jak to się robi w przypadku algorytmu opisanego w rozdziale \ref{bpf_chapter}.
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=15cm]{./lost.png}
@@ -200,12 +199,47 @@ Sprawdzono zachowanie filtra w sytuacji, gdy w jakiś sposób nie poradzi sobie 
 	\end{center}
 \end{figure}
 \begin{figure}[H]
-\begin{center}
-	\includegraphics[width=15cm]{./lost_evol.png}
-	\caption{Sprawdzenie jak zmodyfikowany filtr radzi sobie w sytuacji gdy nie ma cząstek w pobliży faktycznego stanu.}
-	\label{lost_evol}
-\end{center}
+	\begin{center}
+		\includegraphics[width=15cm]{./lost_evol.png}
+		\caption{Sprawdzenie jak zmodyfikowany filtr radzi sobie w sytuacji gdy nie ma cząstek w pobliży faktycznego stanu.}
+		\label{lost_evol}
+	\end{center}
 \end{figure}
-\section{Wpływ różnorodności terenu}
-\section{Rozkład p przy dryfie - chodzi o genetyczne}
+\section{Wpływ zmienności mapy} \label{zmienna_mapa_chap}
+W problemie robota w pokoju pomiary które może zbierać robot zazwyczaj nie zmieniają się znacząco, przy niewielkich zmianach stanu. Zupełnie inaczej jest w problemie samolotu w locie, gdzie przesunięcie o 10 jednostek daje w zasadzie losowe pomiary. Na rysunku \ref{pf_plane} widać przykładową realizację podstawowego algorytmu dla tego problemu. Mimo iż liczba cząstek wyniosła $N=10000$ algorytm nie jest w stanie poprawnie określić położenia. Na rysunku \ref{bpf_plane_wro} zaprezentowano jak BPF opisany w rozdziale \ref{bpf_chapter} radzi sobie z tym problemem, liczba cząstek wyniosła $N=961$. Jak widać, wyniki są nieporównywalnie lepsze niż w przypadku podstawowego algorytmu.
+\begin{figure}[H]
+	\begin{center}
+		\includegraphics[width=11cm]{./pf_plane.png}
+		\caption{Przykład zastosowania podstawowego algorytmu do problemu samolotu w locie.}
+		\label{pf_plane}
+	\end{center}
+\end{figure}
+\begin{figure}[H]
+	\begin{center}
+		\includegraphics[width=15cm]{./bpf_plane_wro.png}
+		\caption{Przykład zastosowania BPF do problemu samolotu w locie.}
+		\label{bpf_plane_wro}
+	\end{center}
+\end{figure}
+
+
+\section{Zastosowanie BPF do problemu robota w pokoju}
+Na koniec podjęto próbę zastosowania BPF do problemu robota w pokoju. Przykład realizacji jest widoczny na rysunku \ref{bpf_robot_2d}. Jak widać, wyniki są bardzo obiecujące, zwłaszcza, gdy się spojrzy na rysunek \ref{bpf_robot_2d_err}, gdzie porównano oba BPF z podstawowym algorytmem (na pojedynczym uruchomieniu), a na którym widać iż BPF daje o wiele lepsze wyniki. Należy zauważyć iż podczas uruchamiania BPF dawał zazwyczaj zawsze takie same wyniki, natomiast podstawowy algorytm znacząco zmieniał się za każdym razem.
+\begin{figure}[H]
+	\begin{center}
+		\includegraphics[width=12cm]{./bpf_robot_2d.png}
+		\caption{Przykład zastosowania BPF do problemu robota w pokoju.}
+		\label{bpf_robot_2d}
+	\end{center}
+\end{figure}
+
+\begin{figure}[H]
+	\begin{center}
+		\includegraphics[width=12cm]{./bpf_robot_2d_err.png}
+		\caption{Porównanie BPF i podstawowej wersji dla problemu robota w pokoju.}
+		\label{bpf_robot_2d_err}
+	\end{center}
+\end{figure}
+
+%\section{Rozkład p przy dryfie - chodzi o genetyczne}
 

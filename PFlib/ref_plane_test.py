@@ -5,7 +5,7 @@ import PFlib as pf
 
 pop_size = 10000
 d_vel = 0.1
-d_ori = 0.01
+d_ori = 0.1
 
 #================================
 
