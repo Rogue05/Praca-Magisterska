@@ -2,44 +2,44 @@
 %\subsection{Pojęcia podstawowe}
 W tym rozdziale został opisany podstawowy algorytm filtra cząsteczkowego, wraz z jego adaptacją do wyznaczania lokalizacji. Ponadto opisano tutaj kilka wybranych usprawnień i modyfikacji podstawowej wersji.
 \section{Opis problemu}
-Celem filtru cząsteczkowego jest wyznaczenie rozkładu zmiennej stanu $X_k$, na podstawie szczątkowych pomiarów $Y_k$ za pomocą filtracji Bayesowskiej. \\
+Celem filtru cząsteczkowego jest wyznaczenie rozkładu zmiennej stanu $x_k$, na podstawie szczątkowych pomiarów $Y_k$ za pomocą filtracji Bayesowskiej. \\
 \begin{equation*}
 \begin{tikzcd}
-	X_0 \arrow{r} \arrow{d} &X_1 \arrow{r} \arrow{d} &X_2 \arrow{r} \arrow{d} &X_3\arrow{r} \arrow{d} &...\\
+	x_0 \arrow{r} \arrow{d} &x_1 \arrow{r} \arrow{d} &x_2 \arrow{r} \arrow{d} &x_3\arrow{r} \arrow{d} &...\\
 	Y_0 &Y_1 &Y_2 &Y_3 &...
 \end{tikzcd} 
 \end{equation*}
 System taki, można opisać w następujący sposób
 \begin{equation*}
 	\begin{aligned}
-		X_k=g(X_{k-1})+W_{k-1} \\
-		Y_k=h(X_k)+V_k
+		x_k=g(x_{k-1})+W_{k-1} \\
+		Y_k=h(x_k)+V_k
 	\end{aligned}
 \end{equation*}
 gdzie $g$ i $h$ to znane funkcje, a $W_{k-1}$ i $V_k$ to szumy. Jeśli oba szumy byłyby z rozkładu normalnego, a $g$ i $h$ są liniowe, to problem można rozwiązać za pomocą filtru Kalmana. Aby zyskać na ogólności, system można opisać w następujący sposób:
 \begin{equation} \label{problem_eq}
 	\begin{aligned}
-		X_k=g(X_{k-1}, W_{k-1}) \\
-		Y_k=h(X_k, V_k)
+		x_k=g(x_{k-1}, W_{k-1}) \\
+		Y_k=h(x_k, V_k)
 	\end{aligned}
 \end{equation}
-Taki problem, gdy funkcje $g$ i $h$ mogą być nieliniowe względem $X_k$, $Y_k$ oraz szumów $W_{k-1}$ i $V_k$, zazwyczaj jest zbyt złożony aby można było zastosować podejścia oparte o filtr kalmana. W takich przypadkach jedną z możliwości jest zastosowanie filtrów cząsteczkowych. Warto zauważyć, iż funkcja $g$ zawiera informacje o sterowaniu.
+Taki problem, gdy funkcje $g$ i $h$ mogą być nieliniowe względem $x_k$, $Y_k$ oraz szumów $W_{k-1}$ i $V_k$, zazwyczaj jest zbyt złożony aby można było zastosować podejścia oparte o filtr kalmana. W takich przypadkach jedną z możliwości jest zastosowanie filtrów cząsteczkowych. Warto zauważyć, iż funkcja $g$ zawiera informacje o sterowaniu.
 \section{Matematyczny opis filtracji Bayesowskiej}
-Ogólne wzory na filtrowanie Bayesowskie można znaleźć na przykład na wikipedi \cite{wiki_bayes_filter}. Celem pojedynczego kroku filtracji jest wyznaczenie rozkładu a posteriori $p(X_{k}|Y_{0...k})$ opisującego prawdopodobieństwo, że system jest w stanie $X_k$, przy założeniu historii pomiarów $Y_{0...k}$, na podstawie rozkładu a priori $p(X_{k-1}|Y_{0...k-1})$ uzyskanego w poprzednim kroku oraz nowego pomiary $Y_k$. Etap predykcji można opisać poniższym równaniem:
+Ogólne wzory na filtrowanie Bayesowskie można znaleźć na przykład na wikipedi \cite{wiki_bayes_filter}. Celem pojedynczego kroku filtracji jest wyznaczenie rozkładu a posteriori $p(x_{k}|Y_{0...k})$ opisującego prawdopodobieństwo, że system jest w stanie $x_k$, przy założeniu historii pomiarów $Y_{0...k}$, na podstawie rozkładu a priori $p(x_{k-1}|Y_{0...k-1})$ uzyskanego w poprzednim kroku oraz nowego pomiary $Y_k$. Etap predykcji można opisać poniższym równaniem:
 \begin{equation} \label{evolution}
-	p(X_k|Y_{0...k-1})=\int p(X_k|X_{k-1})p(X_{k-1}|Y_{0...k-1}) dX_{k-1}
+	p(x_k|Y_{0...k-1})=\int p(x_k|x_{k-1})p(x_{k-1}|Y_{0...k-1}) dx_{k-1}
 \end{equation}
-gdzie $p(X_k|X_{k-1})$ opisuje ewolucję systemu między krokami $k-1$ i $k$. Etap korekcji realizuje się w oparciu o wzór Bayesa, po otrzymaniu kolejnego pomiaru $Y_k$:
+gdzie $p(x_k|x_{k-1})$ opisuje ewolucję systemu między krokami $k-1$ i $k$. Etap korekcji realizuje się w oparciu o wzór Bayesa, po otrzymaniu kolejnego pomiaru $Y_k$:
 \begin{equation}\label{bayes_formula}
-	p(X_k|Y_{0...k})=\frac{p(Y_k|X_k)p(X_k|Y_{0...k-1})}{p(Y_k|Y_{0...k-1})}
+	p(x_k|Y_{0...k})=\frac{p(Y_k|x_k)p(x_k|Y_{0...k-1})}{p(Y_k|Y_{0...k-1})}
 \end{equation}
-gdzie $p(Y_k|X_k)$ opisuje rozkład prawdopodobieństwa uzyskania pomiaru $Y_k$ w stanie $X_k$. Warto zauważyć, iż $p(Y_k|Y_{0...k})$ można opisać wzorem:
+gdzie $p(Y_k|x_k)$ opisuje rozkład prawdopodobieństwa uzyskania pomiaru $Y_k$ w stanie $x_k$. Warto zauważyć, iż $p(Y_k|Y_{0...k})$ można opisać wzorem:
 \begin{equation}
-p(Y_k|Y_{0...k})=\int p(Y_k|X_k)p(X_k|Y_{0...k-1}) dX_k
+p(Y_k|Y_{0...k})=\int p(Y_k|x_k)p(x_k|Y_{0...k-1}) dx_k
 \end{equation}
-więc mianownik równania \ref{bayes_formula} jest stały względem $X_k$. Mając to na uwadze, oraz podstawiając równanie \ref{evolution} do \ref{bayes_formula} można uzyskać ogólną formułę jednego kroku filtracji:
+więc mianownik równania \ref{bayes_formula} jest stały względem $x_k$. Mając to na uwadze, oraz podstawiając równanie \ref{evolution} do \ref{bayes_formula} można uzyskać ogólną formułę jednego kroku filtracji:
 \begin{equation}
-	p(X_k|Y_{0...k})=\mu p(Y_k|X_k)\int p(X_k|X_{k-1})p(X_{t-1}|Y_{0...t-1}) dX_{t-1}
+	p(x_k|Y_{0...k})=\mu p(Y_k|x_k)\int p(x_k|x_{k-1})p(x_{t-1}|Y_{0...t-1}) dx_{t-1}
 \end{equation}
 gdzie $\mu$ jest stałą normalizacyjną, pozostałą po przyjęciu że $p(Y_k|Y_{0...k})$ ma stałą wartość.
 \section{Reprezentacja rozkładu prawdopodobieństwa}
@@ -47,11 +47,11 @@ Aby móc w praktyce zrealizować filtr cząsteczkowy, konieczne jest znalezienie
 \begin{equation*}
 	p_{i,k}=\{x_{k,i},w_{k,i}\}
 \end{equation*}
-gdzie $x_{k,i}$ to stan w iteracji $k$ związany z $i$-tą cząstką, $w_{k,i}$ to jej waga. Korzystając z takiej reprezentacji, rozkład $p(X_k|Y_{0...k})$ ze wzoru \ref{evolution} można zapisać w następujący sposób:
+gdzie $x_{k,i}$ to stan w iteracji $k$ związany z $i$-tą cząstką, $w_{k,i}$ to jej waga. Korzystając z takiej reprezentacji, rozkład $p(x_k|Y_{0...k})$ ze wzoru \ref{evolution} można zapisać w następujący sposób:
 \begin{equation}
-	p(x_k|Y_{0...k})\approx \sum_{i=0}^{N} w_{k,i}	\delta(X_k-x_{k,i})
+	p(x_k|Y_{0...k})\approx \sum_{i=0}^{N} w_{k,i}	\delta(x_k-x_{k,i})
 \end{equation}
-gdzie $N$ oznacza liczbę cząstek, a $\delta$ to delta Dirac'a. Dzięki takiej reprezentacji prawdopodobieństwo $p(X_k|Y_{0...k-1})$ opisane we wzorze \ref{evolution} zostaje zastąpione przez wagę $w_{k,i}$ dla każdej cząstki, co sprawia, że równanie \ref{bayes_formula} upraszcza się do:
+gdzie $N$ oznacza liczbę cząstek, a $\delta$ to delta Dirac'a. Dzięki takiej reprezentacji prawdopodobieństwo $p(x_k|Y_{0...k-1})$ opisane we wzorze \ref{evolution} zostaje zastąpione przez wagę $w_{k,i}$ dla każdej cząstki, co sprawia, że równanie \ref{bayes_formula} upraszcza się do:
 \begin{equation}\label{weight_update}
 	w_{k,i} = w_{k-1,i} p(y_k|x_{k,i})
 \end{equation}
@@ -59,7 +59,7 @@ gdzie $N$ oznacza liczbę cząstek, a $\delta$ to delta Dirac'a. Dzięki takiej 
 % Warto zauważyć, że taka reprezentacja realizuje procedurę importance sampling
 
 \section{Podstawowy algorytm - SIR} \label{basic_algorithm}
-Sam skrót SIR oznacza stochastic importance resampling, i jest to standardowa realizacja filtra cząsteczkowego w praktyce. Opis algorytmu można znaleźć w \cite{wiki_pf}. Sam importance sampling polega na wykorzystaniu właściwości jednego rozkładu prawdopodobieństwa, do próbkowania z drugiego. W tym przypadku, próbkujemy z rozkładu $p(X_k|Y_{0...k})$ korzystając $p(Y_k|X_k)$.
+Sam skrót SIR oznacza stochastic importance resampling, i jest to standardowa realizacja filtra cząsteczkowego w praktyce. Opis algorytmu można znaleźć w \cite{wiki_pf}. Sam importance sampling polega na wykorzystaniu właściwości jednego rozkładu prawdopodobieństwa, do próbkowania z drugiego. W tym przypadku, próbkujemy z rozkładu $p(x_k|Y_{0...k})$ korzystając z wag uzyskanych z $p(Y_k|x_k)$.
 Algorytm SIR Przebiega w następujący sposób:
 \begin{enumerate}[label=(\alph*)]
 	\item Zaczyna się od zainicjowania zbioru cząstek losowymi stanami i równymi dla wszystkich cząstek wagami. Ważne jest, aby uzyskana w ten sposób populacja była w stanie odpowiednio oddać właściwości niezdyskretyzowanego rozkładu. \label{pf_init_step}
@@ -77,7 +77,7 @@ Algorytm SIR Przebiega w następujący sposób:
 	\begin{equation}
 		\hat{x_k} = \sum_{i=0}^{N} w_{k,i} x_{k,i}
 	\end{equation}
-	\item Przeprowadza się ponowne próbkowanie, generując nową populację cząstek z poprzedniej, korzystając z wag. W praktyce zazwyczaj nie przeprowadza się próbkowania co iterację, aby przyspieszyć obliczenia. Robi się to dopiero gdy spełnione jest pewne kryterium, którym najczęściej jest spadek efektywnej cząstek, opisanej równaniem \ref{neff_form} poniżej pewnego progu.
+	\item Przeprowadza się ponowne próbkowanie, generując nową populację cząstek z poprzedniej, korzystając z wag. W praktyce zazwyczaj nie przeprowadza się próbkowania co iterację, aby przyspieszyć obliczenia. Robi się to dopiero gdy spełnione jest pewne kryterium, którym najczęściej jest spadek efektywnej liczby cząstek, opisanej równaniem \ref{neff_form}, poniżej pewnego progu.
 	\begin{equation}\label{neff_form}
 		N_{eff_k} = \dfrac{1}{\sum w_{k,i}^2}
 	\end{equation}
@@ -92,7 +92,7 @@ Najprostszym przykładem problemu lokalizacji na którym można zademonstrować 
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=10cm]{./simple_example.png}
-		\caption{Przykładowa realizacja prostego filtra. Czerwona strzałka wskazuje kierunek ruchu robota, czerwone punkty pokazują estymowaną lokalizację robota, natomiast niebieskie punkty prawdziwe położenie. W kolejnych rzędach zestawiono histogramy położenia cząstek w poszczególnych iteracjach. Populacja składała się z 10 osobników.}\label{simple_example}
+		\caption[Przykładowa realizacja prostego filtra.]{Przykładowa realizacja prostego filtra. Czerwona strzałka wskazuje kierunek ruchu robota, czerwone punkty pokazują estymowaną lokalizację robota, natomiast niebieskie punkty prawdziwe położenie. W kolejnych rzędach zestawiono histogramy położenia cząstek w poszczególnych iteracjach. Populacja składała się z 10 osobników.}\label{simple_example}
 	\end{center}
 \end{figure}
 
@@ -101,7 +101,7 @@ Oczywistym jest, że największy wpływ na złożoność obliczeniową filtra cz
 \begin{equation}\label{ceana_pogorszenia}
 	\xi_t = |y_t-h(\hat{x_k})|
 \end{equation}
-i wyznacza się się je za każdym razem gdy usunie się cząstkę.
+i wyznacza się się je za każdym razem, gdy usunie się cząstkę.
 
 \begin{algorithm}[H]
 	\SetAlgoLined
@@ -139,7 +139,7 @@ i wyznacza się się je za każdym razem gdy usunie się cząstkę.
 	}
 	
 \end{algorithm}
-W algorytmie \ref{adaptive_N} wydzielono dwie sekcje, testowe usuwanie cząstek oraz wyznaczanie nowego $N_k$. W pierwszym etapie wyznacza się wartości $\xi(n_s)$ dal różnych rozmiarów populacji, kolejno ujmując cząstki które leżą zbyt blisko siebie. Minimalna odległość na danym wymiarze $d$, po przekroczeniu której usuwa się jedną z cząstek, jest określana przez parametr $\gamma_d$. W drugim etapie wyznacza się nowy rozmiar populacji $N_{k+1}$ w zależności od $\xi_k$. Dopuszczalny błąd wprowadzany przez zmniejszenie populacji jest określany przez $\alpha$.
+W algorytmie \ref{adaptive_N} wydzielono dwie sekcje, testowe usuwanie cząstek oraz wyznaczanie nowego $N_k$. W pierwszym etapie wyznacza się wartości $\xi(n_s)$ dla różnych rozmiarów populacji $n_s$, kolejno ujmując cząstki które leżą zbyt blisko siebie. Minimalna odległość na danym wymiarze $d$, po przekroczeniu której usuwa się jedną z cząstek, jest określana przez parametr $\gamma_d$. W drugim etapie wyznacza się nowy rozmiar populacji $N_{k+1}$ w zależności od $\xi_k$. Dopuszczalny błąd wprowadzany przez zmniejszenie populacji jest określany przez $\alpha$.
 
 % Może się wydawać, iż zwiększy to złożoność obliczeniową, ponieważ trzeba o wiele więcej czasu poświęcić na analizę poszczególnych cząstek, jednak dzięki temu możemy zredukować samą ich liczbę, co sprawia, że koniec końców złożoność obliczeniowa nie zmienia się znacząco, a jakość wyników się poprawia
 \section{Box Particle Filter (BPF)} \label{bpf_chapter}
@@ -148,7 +148,7 @@ W tym podejściu zaproponowanym w \cite{bpf_base} i udoskonalonym w \cite{brbpf}
 	\item W kroku \ref{pf_init_step}, cząsteczki interwałowe są inicjalizowane w taki sposób, aby pokrywać całą dopuszczalną przestrzeń stanów i nie nachodzić na siebie nawzajem.
 	\item Ewolucja systemu opisana w kroku \ref{pf_drift_step}, zostaje zastąpione przez przekształcenie interwałów. Wykorzystuje się do tego funkcję interwałową $[g]$ konstruowaną na podstawie funkcji $g$ z równania \ref{problem_eq}. Ważne jest aby w przeciwieństwie do operacji z kroku \ref{pf_drift_step}, $[g]$ dawała w pełni deterministyczne wyniki, uwzględniające szumy obecne w systemie. Na przykład w problemie opisanym w rozdziale \ref{simple_example_chap}, jeśli cząstka byłaby interwałem [2,3] i miałaby być przesunięta o $1\pm 0.1$ to korzystając z reguły $3\sigma$ \cite{3_sigma_rule} można skonstruować nowy interwał po przesunięciu [2.9,4.1]. Opisuje się to następującym wzorem:
 	\begin{equation}
-		[x_{k+1,i}] = [g]([x_{k,i}])
+		[x_{k,i}] = [g]([x_{k-1,i}])
 	\end{equation}
 	
 	\item Zamiast pomiaru z kroku \ref{pf_reweight_step} wykorzystuje się interwał pomiarowy, uwzględniający jego niepewność (interwał ten można skonstruować według reguły $3\sigma$), oraz konstruując funkcję $[h]$, na podstawie funkcji $h$ z równania \ref{problem_eq}, generującą interwał pomiaru $[y]$ ze stanu danej cząstki. Nowe wagi ustala się na podstawie poniższych wzorów.
@@ -165,19 +165,19 @@ W tym podejściu zaproponowanym w \cite{bpf_base} i udoskonalonym w \cite{brbpf}
 	\item Przed wyliczeniem estymowanego stanu można przeprowadzić zawężenie interwałów. Polega ono na pomniejszeniu $[x_{k,i}]$ w oparciu o interwał $[r_{k,i}]$. W przykładzie z rozdziału \ref{simple_example_chap}, mogło by to wyglądać w następujący sposób: jeśli uzyskano pomiar [7,9] który można uzyskać tylko w interwale [4,6], to cząstka z interwałem [3,5] zostanie zawężona do [4,5].
 	
 	\item Estymacja stanu odbywa się z wykorzystaniem średniej ważonej centrów interwałów (dla przykładu z rozdziału \ref{simple_example_chap} byłby to środek odcinka).
-	\begin{equation}
+	\begin{equation} \label{bpf_est}
 		\hat{x_k} = \sum_{i=0}^{N} w_{k,i} C_{k,i}
 	\end{equation}
 	gdzie $C_{k,i}$ jest centrum $i$-tej cząstki w $k$-tej iteracji.
 	\item Przed próbkowaniem można sprawdzić, czy cząstki nie nachodzą na siebie nawzajem za bardzo. Robi się to korzystając ze wzoru
-	\begin{equation}
+	\begin{equation}\label{theta_coeff}
 		\begin{aligned}
 			\theta = \sqrt{\frac{\sum_{i=0}^{N}|[x_{k,i}]|}{N |P_{union}|}}
 		\end{aligned}
 	\end{equation}
 	gdzie $P_{union}$ jest najmniejszym interwałem który zawiera wszystkie interwały $[x_{k,i}]$. Gdy $\theta$ jest większe niż pewien próg, populacja jest inicjalizowana na nowo równomiernie dzieląc $P_{union}$.
 	
-	\item Ponowne próbkowanie przebiega zupełnie inaczej niż w kroku \ref{resampling_step} podstawowego. Sam moment ponownego próbkowania można nadal dobierać według wzoru \ref{neff_form}. Próbkowanie zostaje zastąpione podziałem wybranych cząstek. Dla przykładu, gdy dana cząstka po próbkowaniu powinna być wzięta pięć razy, zostaje ona pięć razy podzielona wzdłuż najdłuższego wymiaru (może też być dzielona wzdłuż losowo wybranego interwału).
+	\item Ponowne próbkowanie przebiega zupełnie inaczej niż w kroku \ref{resampling_step} podstawowego algorytmu. Sam moment ponownego próbkowania można nadal dobierać według wzoru \ref{neff_form}, a samo próbkowanie zostaje zastąpione podziałem wybranych cząstek. Dla przykładu, gdy dana cząstka po próbkowaniu powinna być wzięta pięć razy, zostaje ona pięć razy podzielona wzdłuż najdłuższego wymiaru (może też być dzielona wzdłuż losowo wybranego interwału).
 	\item Jednym z najważniejszych usprawnień zaproponowanych w \cite{brbpf} jest reinicjalizacja cząstek, w przypadku gdy suma wag spadnie do zera. Jest to konieczne, ponieważ w takim przypadku niemożliwe staje się próbkowanie.
 \end{itemize}
 
