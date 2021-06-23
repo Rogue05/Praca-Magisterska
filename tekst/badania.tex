@@ -42,7 +42,7 @@ O ile nie będzie napisane inaczej, samolot w lewym dolnym rogu mapy, miał prę
 W tym rozdziale zajęto się badaniami mającymi potwierdzić poprawne działanie zaimplementowanego rozwiązania. Na początku sprawdzono, jak zmiana generatora liczb losowych wpłynęła na wyniki, następnie sprawdzono, jak poradzi sobie algorytm przy braku punktów odniesienia, potem co się dzieje przy braku ewolucji systemu ($v=0$). Nie skupiano się no konkretnych wartościach liczbowych, jedynie wizualnie oceniano wyniki.
 
 \subsection{Wpływ generatora}
-Przebadano trzy generatory wbudowane w język C++: domyślny linear congruential generator(LCG) \cite{lcg_wiki}, Mersenne Twister \cite{mersenne_wiki} oraz wbudowany niedeterministyczny generator. Populacja cząstek wynosiła $N=1000$. Wyniki rysowano po 1, 11 i 21 iteracjach filtra(nr iteracji oznaczano jako $k$). Wyniki przedstawiono na rysunkach \ref{lcg_example}, \ref{mersenne_example}, \ref{device_example}. Jak widać dla wszystkich generatorów wyniki są niemal takie same, i zbiegają do faktycznego położenia robota. Ponieważ dla każdego generatora uzyskano poprawne wyniki, w dalszych badaniach korzystano z generatora LCG ponieważ jest najprostszy, i, co za tym idzie, najszybszy.
+Przebadano trzy generatory wbudowane w język C++: domyślny linear congruential generator(LCG) \cite{lcg_wiki}, Mersenne Twister \cite{mersenne_wiki} oraz wbudowany niedeterministyczny generator. Populacja cząstek wynosiła $N=1000$. Wyniki rysowano po 1, 11 i 21 iteracjach filtra(nr iteracji oznaczano jako $k$). Wyniki przedstawiono na rysunkach \ref{lcg_example}, \ref{mersenne_example}, \ref{device_example}. Jak widać dla wszystkich generatorów wyniki są niemal takie same, i zbiegają do faktycznego położenia robota. Ponieważ dla każdego generatora uzyskano poprawne wyniki, w dalszych badaniach korzystano z~generatora LCG ponieważ jest najprostszy, i, co za tym idzie, najszybszy.
 
 \begin{figure}[H]
 	\begin{center}
@@ -70,7 +70,7 @@ Przebadano trzy generatory wbudowane w język C++: domyślny linear congruential
 
 
 \subsection{Niejednoznaczna mapa}
-W tym przypadku zbadano jak zachowa się filtr przy braku punktów odniesienia. W kwadratowym pokoju, powinno to spowodować pojawienie się czterech równie prawdopodobnych pozycji. Jak widać przewidywania potwierdziły się na rysunku \ref{no_pivot}. Na rysunku \ref{one_pivot} przedstawiono sytuację, gdy mapa dopuszcza dwie możliwe pozycja. Badania przeprowadzono przy populacji $N=10000$ cząstek.
+W tym przypadku zbadano jak zachowa się filtr przy braku punktów odniesienia. W~kwadratowym pokoju, powinno to spowodować pojawienie się czterech równie prawdopodobnych pozycji. Jak widać przewidywania potwierdziły się na rysunku \ref{no_pivot}. Na rysunku \ref{one_pivot} przedstawiono sytuację, gdy mapa dopuszcza dwie możliwe pozycja. Badania przeprowadzono przy populacji $N=10000$ cząstek.
 
 \begin{figure}[H]
 	\begin{center}
@@ -172,7 +172,7 @@ W tym rozdziale zbadano wpływ szumu na jakość estymacji. Przebadano trzy rodz
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=12cm]{./blad_staly.png}
-		\caption{Wpływ pojawienia się systematycznego błędu pomiaru na jakość estymacji dla robota w pokoju.}
+		\caption{Wpływ pojawienia się systematycznego błędu pomiaru na jakość estymacji dla robota w~pokoju.}
 		\label{blad_staly}
 	\end{center}
 \end{figure}
@@ -190,7 +190,7 @@ Przebadano dwie metody próbkowania: najpopularniejszy stochastic universal samp
 
 
 \section{Skuteczność w poprawianiu błędnie określonego położenia}
-Sprawdzono zachowanie filtra w sytuacji, gdy w jakiś sposób nie poradzi sobie o określeniem położenia, i zgubi się. Wyniki widać na rysunku \ref{lost}. Można zaobserwować, iż algorytm jest w stanie odszukać faktyczny stan, jednak jest to bardziej kwestia szczęścia. Podejście opisane w rozdziale \ref{evol_chap} jest w stanie delikatnie poprawić rozwiązanie, jednak nie jest ono tak skuteczne jak przeszukanie od nowa całej przestrzeni stanów jak to się robi w przypadku algorytmu opisanego w rozdziale \ref{bpf_chapter}.
+Sprawdzono zachowanie filtra w sytuacji, gdy w jakiś sposób nie poradzi sobie o określeniem położenia, i zgubi się. Wyniki widać na rysunku \ref{lost}. Można zaobserwować, iż algorytm jest w stanie odszukać faktyczny stan, jednak jest to bardziej kwestia szczęścia. Podejście opisane w~rozdziale \ref{evol_chap} jest w~stanie delikatnie poprawić rozwiązanie, jednak nie jest ono tak skuteczne jak przeszukanie od nowa całej przestrzeni stanów jak to się robi w przypadku algorytmu opisanego w rozdziale \ref{bpf_chapter}.
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=15cm]{./lost.png}
@@ -210,7 +210,7 @@ W problemie robota w pokoju pomiary które może zbierać robot zazwyczaj nie zm
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=11cm]{./pf_plane.png}
-		\caption{Przykład zastosowania podstawowego algorytmu do problemu samolotu w locie.}
+		\caption{Przykład zastosowania podstawowego algorytmu do problemu samolotu w~locie.}
 		\label{pf_plane}
 	\end{center}
 \end{figure}

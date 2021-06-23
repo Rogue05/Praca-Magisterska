@@ -1,10 +1,10 @@
 \chapter{Wprowadzenie}
-W rozdziale przedstawiono cel i zakres pracy oraz podstawowe zadania i problemy wyznaczania lokalizacji. Ponadto opisano ogólną ideę stojącą za filtrami cząsteczkowymi - filtrację Bayesowską. Praca jest inspirowana \cite{appl3}.
+W rozdziale przedstawiono cel i zakres pracy oraz podstawowe zadania i problemy wyznaczania lokalizacji. Ponadto opisano ogólną ideę stojącą za filtrami cząsteczkowymi - filtrację Bayesowską. Praca jest inspirowana artykułem \cite{appl3}.
 \section{Zadania i problemy wyznaczania lokalizacji}
-Mogłoby się wydawać, iż w dzisiejszych czasach, gdy mamy możliwość korzystania z systemu GPS, nie ma potrzeby zajmować się innymi sposobami wyznaczania lokalizacji. Jednak o ile jest to prawdą w dużej skali, jak np. gdy chce się wyznaczyć adres w mieście pod którym się znajdujemy, to gdy chcemy wyznaczyć swoją lokalizację bardziej dokładnie, np. jak to robią niektóre odkurzacze mobilne, to trzeba wykorzystać do tego dane z~innych sensorów, np. lidarów. Czasami można wcale nie mieć możliwości korzystania z~systemu GPS, na przykład pod wodą. Innym problemem może być poprawa już znanego przybliżonego położenia. W pracy zostaną przeanalizowane dwa problemy związane z~wyznaczaniem lokalizacji:
+Mogłoby się wydawać, iż w dzisiejszych czasach, gdy mamy możliwość korzystania z systemu GPS, nie ma potrzeby zajmować się innymi sposobami wyznaczania lokalizacji. Jednak o ile jest to prawdą w dużej skali, jak np. gdy chce się wyznaczyć adres w mieście pod którym się znajdujemy, to gdy chcemy wyznaczyć lokalizację bardziej dokładnie, np. tak jak to robią niektóre odkurzacze mobilne, to trzeba wykorzystać do tego dane z~innych sensorów, np. lidarów. Czasami można wcale nie mieć możliwości korzystania z~systemu GPS, na przykład pod wodą. Innym problemem może być poprawa już znanego przybliżonego położenia. W pracy zostaną przeanalizowane dwa problemy związane z~wyznaczaniem lokalizacji:
 \begin{itemize}
 	\item Określanie położenia samolotu, na podstawie znanej mapy wysokościowej terenu, odczytów z wysokościomierza barometrycznego, oraz, ewentualnie, dodatkowych danych (np. odczytu z kompasu). 
-	\item Określanie lokalizacji robota mobilnego, umieszczonego w ograniczonej przestrzeni z przeszkodami (ale na płaskiej powierzchni - mapa jest w dwóch wymiarach).
+	\item Określanie lokalizacji robota mobilnego, umieszczonego w ograniczonej przestrzeni z~przeszkodami (ale na płaskiej powierzchni - mapa jest w dwóch wymiarach).
 \end{itemize}
 Mimo tego, iż są to jedynie dwa przypadki, w praktyce można je uogólnić na wiele sytuacji. Dla przykładu w \cite{underwater_pf} zajęto się problemem lokalizacji pod wodą, który w praktyce można rozwiązać w ten sam sposób co problem samolotu - mapa wysokości zostaje jedynie zastąpiona przez mapę głębokości.
 \section{Cel pracy}
@@ -17,14 +17,14 @@ Na chwilę obecną, algorytmy oparte o filtrację Bayesowską są szeroko wykorz
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=10cm]{./predict_update.png}
-		\caption[Idea filtracji Bayesowskiej]{Idea filtracji Bayesowskiej. Obrazek zaczerpnięto z \ref{main_idea}.}
+		\caption[Idea filtracji Bayesowskiej]{Idea filtracji Bayesowskiej. Obrazek zaczerpnięto z \cite{main_idea}.}
 		\label{bayes_fil_idea}
 	\end{center}
 \end{figure}
-Na rysunku \ref{filtr_hier} przedstawiono hierarchię rozwiązać opartych o to podejście. Jak widać jest to bardzo duża rodzina rozwiązań, jednak w pracy zostaną poruszone jedynie metody oparte o filtry cząsteczkowe.
+Na rysunku \ref{filtr_hier} przedstawiono hierarchię rozwiązać opartych o to podejście. Jak widać jest to bardzo duża rodzina rozwiązań, jednak w pracy zostaną poruszone jedynie metody oparte o~filtry cząsteczkowe.
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=10cm]{./nfg001.jpg}
-		\caption[Hierarchia filtrów opartych o filtrację Bayesowską.]{Hierarchia filtrów opartych o filtrację Bayesowską. Obrazek zaczerpnięto z \cite{prac_gui}.} \label{filtr_hier}
+		\caption[Hierarchia filtrów opartych o filtrację Bayesowską.]{Hierarchia filtrów opartych o filtrację Bayesowską. Obrazek zaczerpnięto z~\cite{prac_gui}.} \label{filtr_hier}
 	\end{center}
 \end{figure}

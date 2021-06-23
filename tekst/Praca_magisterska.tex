@@ -1,187 +1,60 @@
-\documentclass[a4paper,onecolumn,oneside,12pt,extrafontsizes]{memoir}
+%Przykładowy plik ułatwiający złożenie projektu dyplomowego inżynierskiego.
+%UWAGA: Generowany napis na stronie tytułowej o treści PROJEKT DYPLOMOWY INŻYNIERSKI został zaproponowany przeze mnie i nie jest, póki co, potwierdzony przez władze wydziału. Przed ostatecznym oddaniem tak złożonej pracy należy upewnić się jaka powinna być treść tego napisu. W momencie gdy uzyskam informację na temat treści tego napisu, dokonam niezbędnych zmian w źródłach.
 
+%\documentclass[eng,printmode]{mgr}
+\documentclass{mgr}
 
-\usepackage[T1]{fontenc}
-\usepackage[polish]{babel}
-\usepackage[utf8]{inputenc}
-\usepackage{setspace}
-\usepackage{tabularx}
-\usepackage{color,calc}
-\selectlanguage{polish}
-\usepackage{lmodern}
-\usepackage{graphicx}
-\usepackage{titlesec}
-\setcounter{secnumdepth}{4}
+%opcje klasy dokumentu mgr.cls zostały opisane w dołączonej instrukcji
+
+\usepackage{longtable}
+
+%\input{arduinoLanguage.tex}
+%\usepackage[hyphens]{url}
+%\usepackage{minted}
+\usepackage[newfloat]{minted}
 \usepackage{caption}
+\usepackage{xcolor} 
+\newenvironment{code}{\captionsetup{type=listing}}{}
+%\SetupFloatingEnvironment{listing}{name=Source Code}
+
+\definecolor{codeGray}{RGB}{240,240,240} 
+\definecolor{codeBlack}{RGB}{0,0,0} 
+\definecolor{codeRed}{RGB}{221,0,0} 
+\definecolor{codeBlue}{rgb}{0,0,187} 
+\definecolor{codeYellow}{RGB}{255,128,0} 
+\definecolor{codeGreen}{RGB}{0,119,0}
+\usepackage{gensymb}
+%poniżej deklaracje użycia pakietów, usunąć to co jest niepotrzebne
+%\usepackage{polski} %przydatne podczas składania dokumentów w j. polskim
+\usepackage[polish]{babel}%alternatywnie do pakietu polski, wybrać jeden z nich
+%\usepackage[cp1250]{inputenc} %kodowanie znaków, zależne od systemu
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc} %poprawne składanie polskich czcionek
+
+%pakiety do grafiki
 \usepackage{graphicx}
-%\usepackage{picture}
-%\usepackage{gensymb}
-%\usepackage{listingsutf8}
-%\lstset{language=Pascal}
-%\usepackage{listings}
+\usepackage{subfigure}
+\usepackage{psfrag}
 
-\usepackage{ebgaramond}
+%pakiety dodające dużo dodatkowych poleceń matematycznych
+\usepackage{amsmath}
+\usepackage{amsfonts}
 
-\usepackage{tgtermes}
+%pakiety wspomagające i poprawiające składanie tabel
+\usepackage{supertabular}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{hhline}
 
-\usepackage{amsmath}  
-\usepackage{fixltx2e} 
+%pakiet wypisujący na marginesie etykiety równań i rysunków zdefiniowanych przez \label{}, chcąc wygenerować finalną wersję dokumentu wystarczy usunąć poniższą linię
+%\usepackage{showlabels}
+%definicje własnych poleceń
+\newcommand{\R}{I\!\!R} %symbol liczb rzeczywistych, działa tylko w trybie matematycznym
+\newtheorem{theorem}{Twierdzenie}[section] %nowe otoczenie do składania twierdzeń
 
-
-\clubpenalty=10000      %kara za sierotki
-\widowpenalty=10000  % nie pozostawiaj wdów
-\brokenpenalty=10000		% nie dziel wyrazów między stronami
-\exhyphenpenalty=999999		% nie dziel słów z myślnikiem
-\righthyphenmin=6			% dziel minimum 3 litery
-
-\renewcommand{\topfraction}{0.95}
-\renewcommand{\bottomfraction}{0.95}
-\renewcommand{\textfraction}{0.05}
-\renewcommand{\floatpagefraction}{0.35}
-
-\setlength{\headsep}{10pt} 
-\setlength{\headheight}{13.6pt}
-\setlength{\footskip}{\headsep+\headheight}
-\setlength{\uppermargin}{\headheight+\headsep+1cm}
-\setlength{\textheight}{\paperheight-\uppermargin-\footskip-1.5cm}
-\setlength{\textwidth}{\paperwidth-5cm}
-\setlength{\spinemargin}{2.5cm}
-\setlength{\foremargin}{2.5cm}
-\setlength{\marginparsep}{2mm}
-\setlength{\marginparwidth}{2.3mm}
-\checkandfixthelayout[fixed]
-
-%\linespread{1}
-\linespread{1.3}
-\setlength{\parindent}{14.5pt}
-
-
-\makeatletter
-\newcommand{\showFontSize}{\f@size pt} % makro wypisujące wielkość bieżącej czcionki
-\makeatother
-
-
-\captionnamefont{\small}
-\captiontitlefont{\small}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Definicja strony tytułowej 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\makeatletter
-%Uczelnia
-\newcommand\uczelnia[1]{\renewcommand\@uczelnia{#1}}
-\newcommand\@uczelnia{}
-%Wydział
-\newcommand\wydzial[1]{\renewcommand\@wydzial{#1}}
-\newcommand\@wydzial{}
-%Kierunek
-\newcommand\kierunek[1]{\renewcommand\@kierunek{#1}}
-\newcommand\@kierunek{}
-%Specjalność
-\newcommand\specjalnosc[1]{\renewcommand\@specjalnosc{#1}}
-\newcommand\@specjalnosc{}
-%Tytuł po angielsku
-\newcommand\titleEN[1]{\renewcommand\@titleEN{#1}}
-\newcommand\@titleEN{}
-%Tytuł krótki
-\newcommand\titleShort[1]{\renewcommand\@titleShort{#1}}
-\newcommand\@titleShort{}
-%Promotor
-\newcommand\promotor[1]{\renewcommand\@promotor{#1}}
-\newcommand\@promotor{}
-
-\usepackage[absolute]{textpos} % zamarkowano, bo ostatecznie wykorzystano otoczenie picture
-
-\def\maketitle{%
-	\pagestyle{empty}%
-	%%\garamond 
-	\fontfamily{\ebgaramond@family}\selectfont % na stronie tytułowej czcionka garamond
-	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
-	%% Poniżej, w otoczniu picture, wstawiono tytuł i autora. 
-	%% Tytuł (z autorem) musi znaleźć się w obszarze 
-	%% odpowiadającym okienku 110mmx75mm, którego lewy górny róg 
-	%% jest w położeniu 77mm od lewej i 111mm od górnej  krawędzi strony 
-	%% (tak wynika z wycięcia na okładce). 
-	%% Poniższy kod musi być użyty dokładnie w miejscu gdzie jest.
-	%% Jeśli tytuł nie mieści się w okienku, to należy tak pozmieniać 
-	%% parametry użytych komend, aby ten przydługi tytuł jednak 
-	%% upakować go do okienka.
-	%%
-	%% Sama okładka (kolorowa strona z wycięciem, do pobrania z dydaktyki) 
-	%% powinna być przycięta o 3mm od każdej z krawędzi.
-	%% Te 3mm pewnie zostawiono na ewentualne spady czy też specjalną oprawę.
-	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
-	\newlength{\tmpfboxrule}
-	\setlength{\tmpfboxrule}{\fboxrule}
-	\setlength{\fboxsep}{2mm}
-	\setlength{\fboxrule}{0mm} 
-	%\setlength{\fboxrule}{0.1mm} %% jeśli chcemy zobaczyć ramkę
-	\setlength{\unitlength}{1mm}
-	\begin{picture}(0,0)
-	\put(26,-124){\fbox{
-			\parbox[c][71mm][c]{104mm}{\centering 
-				{\fontsize{16pt}{18pt}\selectfont \@title}\\[5mm]
-				{\fontsize{16pt}{18pt}\selectfont \@titleEN}\\[20mm]
-				{\fontsize{16pt}{18pt}\selectfont AUTOR:}\\[2mm]
-				{\fontsize{14pt}{16pt}\selectfont \@author}}
-		}
-	}
-	\end{picture}
-	\setlength{\fboxrule}{\tmpfboxrule} 
-	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	%% Reszta strony z nazwą uczelni, wydziału, kierunkiem, specjalnością
-	%% promotorem, oceną pracy, miastem i rokiem
-	{\centering%\vspace{-1cm}
-		{\fontsize{22pt}{24pt}\selectfont \@uczelnia}\\[0.4cm]
-		{\fontsize{22pt}{24pt}\selectfont \@wydzial}\\[0.5cm]
-		\hrule %\vspace*{0.7cm}
-	}
-	{\flushleft\fontsize{14pt}{16pt}\selectfont%
-		\begin{tabular}{ll}
-			KIERUNEK: & \@kierunek\\
-			SPECJALNOŚĆ: & \@specjalnosc\\
-		\end{tabular}\\[1.3cm]
-	}
-	{\centering
-		{\fontsize{32pt}{36pt}\selectfont PRACA DYPLOMOWA}\\[0.5cm]
-		{\fontsize{32pt}{36pt}\selectfont MAGISTERSKA}\\[2.5cm]
-	}
-	\vfill
-	
-
-	\begin{tabularx}{\linewidth}{p{6cm}l}
-		&{\fontsize{16pt}{18pt}\selectfont PROWADZĄCY PRACĘ:}\\[2mm] %UWAGA: tutaj jest miejsce na nazwisko promotora pracy
-		&{\fontsize{14pt}{16pt}\selectfont \@promotor}\\[10mm]
-		&{\fontsize{16pt}{18pt}\selectfont OCENA PRACY:}\\[20mm]
-	\end{tabularx}
-
-	\vspace{2cm}
-	\hrule\vspace*{0.3cm}
-	{\centering
-		{\fontsize{16pt}{18pt}\selectfont \@date}\\[0cm]
-	}
-	%\ungaramond
-	\normalfont
-	\cleardoublepage
-}
-\makeatother
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%  Metadane dokumentu 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\title{Filtry cząsteczkowe i ich zastosowania w problemach wyznaczania lokalizacji}
-\titleEN{Particle filters for selected problems in positioning}
-\author{inż. Wojciech Sopot}
-\uczelnia{POLITECHNIKA WROCŁAWSKA}
-\wydzial{WYDZIAŁ ELEKTRONIKI}
-\kierunek{AUTOMATYKA I ROBOTYKA}
-\specjalnosc{SYSTEMY INFORMATYCZNE W AUTOMATYCE}
-\promotor{dr hab. inż. Paweł Wachel, K$28$W$04$}
-\date{WROCŁAW, 2021}
 
 
 % moje libki start
-
 \usepackage{tikz-cd}
 \usepackage{enumitem}
 
@@ -189,25 +62,89 @@
 %\usepackage[ruled]{algorithm2e}
 \renewcommand{\algorithmcfname}{Algorytm}
 
-\setcounter{secnumdepth}{5}
-\setcounter{tocdepth}{5}
 \usepackage{float}
+
+%\usepackage[polish]{babel}
+%\babelprovide[transforms = oneletter.nobreak]{polish}
+\clubpenalty=10000
+%\usepackage[all]{nowidow}
 % moje libki end
+
+
+%dane do złożenia strony tytułowej
+%\title{Tytuł pracy inżynierskiej}
+%\engtitle{English title}
+\title{Filtry cząsteczkowe i ich zastosowania w~problemach wyznaczania lokalizacji}
+\engtitle{Particle filters for selected problems in positioning}
+\author{Wojciech Sopot}
+\supervisor{dr hab. inż. Paweł Wachel, prof. ucz., W04/K8}
+%\guardian{dr hab. inż. Imię Nazwisko Prof. PWr, I-6} %nie używać jeśli opiekun jest tą samą osobą co prowadzący pracę
+
+%\date{2008} %standardowo u dołu strony tytułowej umieszczany jest bieżący rok, to polecenie pozwala wstawić dowolny rok
+
+%poniżej jest lista kierunków i specjalności na wydziale elektroniki, należy wybrać właściwe lub dopisać jeśli nie ma odpowiednich
+\field{Automatyka i Robotyka (AIR)}
+%\specialisation{Robotyka (ARR)}
+%\specialisation{Komputerowe sieci sterowania (ARK)}
+\specialisation{Systemy informatyczne w automatyce (ASI)}
+%\specialisation{Komputerowe systemy zarządzania \\procesami produkcyjnymi (ARS)}
+%\field{Elektronika i telekomunikacja (EIT)}
+%\specialisation{Akustyka (ETA)}
+%\specialisation{Aparatura elektroniczna (EAE)}
+%\specialisation{Elektroniczne i komputerowe \\systemy automatyki (ESA)}
+%\specialisation{Zastosowania inżynierii komputerowej \\w technice (EZI)}
+%\specialisation{Inżynieria dźwięku (EID)}
+%\specialisation{Elektronika stosowana \\i optokomunikacja (TEO)}
+%\specialisation{Telekomunikacyjne sieci szerokopasmowe (TSS)}
+%\specialisation{Teleinformatyczne sieci mobilne (TSM)}
+%\specialisation{Sygnały w telekomunikacji cyfrowej (TSC)}
+%\specialisation{Teleinformatyczne systemy rozsiewcze (TSR)}
+%\field{Informatyka (INF)}
+%\specialisation{Systemy informatyki w medycynie \\i technice (IMT)}
+%\specialisation{Inżynieria systemów informatycznych (INS)}
+%\specialisation{Inżynieria internetowa (INT)}
+%\specialisation{Systemy i sieci komputerowe (ISK)}
+%\field{Teleinformatyka (TIN)}
+%\specialisation{Teleinformatyka (TIN)}
+
+%tutaj zaczyna się właściwa treść dokumentu
 \begin{document}
-	\maketitle
-	\pagestyle{plain}
-	\tableofcontents	
-	\include{wprowadzenie}
-	\include{filtry_cząsteczkowe}
-	\include{wybrane_narzędzia_programistyczne}
-	\include{badania}
-	\include{wnioski}
+\bibliographystyle{plabbrv} %tylko gdy używamy BibTeXa, ustawia polski styl bibliografii
+
+\maketitle %polecenie generujące stronę tytułową
+%\dedication{6cm}{To jest przykładowa treść opcjonalnej dedykacji, należy ją zmienić lub usunąć w całości polecenie \texttt{$\backslash$dedication}}
+
+\tableofcontents %spis treści
 	
-	\newpage
-	\listoffigures
-%	\newpage
-%	\listoftables
-	
-	\bibliographystyle{plabbrv}
-	\bibliography{biblio}
+\include{wprowadzenie}
+\include{filtry_cząsteczkowe}
+\include{wybrane_narzędzia_programistyczne}
+\include{badania}
+\include{wnioski}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%~\cite{WinNT}
+
+\appendix
+\chapter{Zawartość załączonej płyty CD}
+\begin{itemize}
+    \item Praca magisterska - dokument w formacie .pdf
+    \item Przygotowane oprogramowanie - pliki w formacie .cpp oraz setup.py
+    \item Przygotowane demonstracje - pliki w formacie .py poza setup.py
+    \item requirements.txt - opis środowiska Pythonowego
+\end{itemize}
+
+\addcontentsline{toc}{chapter}{\bibname} %utworzenie w spisie treści pozycji Literatura
+\bibliography{biblio}{} % wstawia bibliografię korzystając z pliku bibliografia.bib - dotyczy BibTeXa, jeżeli nie korzystamy z BibTeXa należy użyć otoczenia thebibliography
+
+%opcjonalnie może się tu pojawić spis rysunków i tabel
+ \listoffigures
+ %\listoftables
+
 \end{document}

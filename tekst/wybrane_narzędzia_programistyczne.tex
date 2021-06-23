@@ -1,16 +1,16 @@
 \chapter{Przygotowane oprogramowanie}
 W tym rozdziale opisano jakie narzędzia programistyczne wybrano i dlaczego akurat te, a następnie opisano przygotowane oprogramowanie.
 \section{Wybrane narzędzia programistyczne}
-Najważniejszymi kryteriami branymi pod uwagę przy wyborze języka programowania była wydajność, wcześniejsza jego znajomość. Jeśli chodzi o IDE(integrated development environment) wystarczyło jeśli dało się w nim pracować z wybranymi językami. Kierując się wydajnością, jako język do implementacji algorytmów wybrano C++, jednak ze względu na brak prostego sposobu graficznej prezentacji wyników, pomocniczo skorzystano z języka Python i jego bibliotek numpy\cite{numpy} i matplotlib\cite{matplotlib}. Aby połączyć oba języki skorzystano z biblioteki pybind11\cite{pybind11} która umożliwia proste tworzenie bibliotek dla Pythona napisanych w C++. W konsekwencji pociągnęło to za sobą wybór IDE - edytora tekstu Sublime Text\cite{sublime}, ponieważ częsta instalacja biblioteki wymuszała ciągłe korzystanie z wiersza poleceń. Aby ułatwić zarządzanie środowiskami Pythona, oraz samą z nim pracę, wykorzystano pakiet Anaconda\cite{anaconda}. W celu zaimplementowania algorytmu Box Particle Filter skorzystano z biblioteki interval będącej częścią zbioru bibliotek Boost\cite{boost_int}.
+Najważniejszymi kryteriami branymi pod uwagę przy wyborze języka programowania była wydajność, wcześniejsza jego znajomość. Jeśli chodzi o IDE(integrated development environment) wystarczyło jeśli dało się w nim pracować z wybranymi językami. Kierując się wydajnością, jako język do implementacji algorytmów wybrano C++, jednak ze względu na brak prostego sposobu graficznej prezentacji wyników, pomocniczo skorzystano z języka Python i jego bibliotek numpy\cite{numpy} i matplotlib\cite{matplotlib}. Aby połączyć oba języki skorzystano z biblioteki pybind11\cite{pybind11} która umożliwia proste tworzenie bibliotek dla Pythona napisanych w C++. W konsekwencji pociągnęło to za sobą wybór IDE - edytora tekstu Sublime Text\cite{sublime}, ponieważ częsta instalacja biblioteki wymuszała ciągłe korzystanie z~wiersza poleceń. Aby ułatwić zarządzanie środowiskami Pythona, oraz samą z nim pracę, wykorzystano pakiet Anaconda\cite{anaconda}. W celu zaimplementowania algorytmu Box Particle Filter skorzystano z biblioteki interval będącej częścią zbioru bibliotek Boost\cite{boost_int}.
 \section{Opis przygotowanej biblioteki}
 Cała biblioteka została zorganizowana jako zbiór funkcji umożliwiających zarządzanie tablicami stanów, gdzie stany były prostymi strukturami danych, oraz kilkoma klasami: klasą implementującą Box Particle Filter, oraz klasami realizującymi mapy potrzebne do badań. Poniżej ogólnie przedstawiono ich opis (dokładniejsze informacje można uzyskać analizując kod), zaś sama biblioteka nazywa się PFlib:
 \begin{itemize}
 	\item robot\_2d - struktura służąca za kontener na stan robota opisany w rozdziale \ref{robot_w_pomieszczeniu_desc}.
-	\item roulette\_wheel\_resample - funkcja realizująca próbkowanie ruletkowe opisane w \cite{rou_wiki} w oparciu o wagi.
-	\item sus\_resample - funkcja realizująca próbkowanie o niskiej wariancji opisane w \cite{sus_wiki} w oparciu o wagi.
+	\item roulette\_wheel\_resample - funkcja realizująca próbkowanie ruletkowe opisane w~\cite{rou_wiki} w~oparciu o~wagi.
+	\item sus\_resample - funkcja realizująca próbkowanie o niskiej wariancji opisane w~\cite{sus_wiki} w~oparciu o~wagi.
 	\item as\_array - funkcja konwertująca tablicę stanów na macierz.
 	\item get\_uniform\_weights - funkcja inicjalizująca tablicę równych sobie wag.
-	\item get\_est - funkcja wyznaczająca średnią ważoną stanów dla danej tablicy stanów i wag.
+	\item get\_est - funkcja wyznaczająca średnią ważoną stanów dla danej tablicy stanów i~wag.
 	\item update\_weights - funkcja przeliczająca wagi z wykorzystaniem nowego pomiaru, korzystając ze wzoru \ref{weight_update}.
 	\item drift\_state - funkcja przeprowadzająca ewolucję pojedynczego stanu.
 	\item drift\_pop - funkcja przeprowadzająca ewolucję tablicy stanów.
@@ -41,6 +41,7 @@ Cała biblioteka została zorganizowana jako zbiór funkcji umożliwiających za
 	\begin{itemize}
 		\item get\_grid - metoda zwracająca macierz będącą mapą wysokościową.
 		\item get\_meas - metoda pozwalająca uzyskać pomiar na zadanych współrzędnych.
+		\item get\_meas\_prob - metoda zwracająca prawdopodobieństwo danego pomiaru.
 	\end{itemize}
 	
 \end{itemize}
