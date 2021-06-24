@@ -66,8 +66,34 @@
 
 %\usepackage[polish]{babel}
 %\babelprovide[transforms = oneletter.nobreak]{polish}
-\clubpenalty=10000
+
+
+%\clubpenalty=10000
+
+
 %\usepackage[all]{nowidow}
+
+\let\oldref\ref
+\renewcommand{\ref}[1]{(\oldref{#1})}
+
+%\usepackage{titlesec}
+%\titlespacing*{\section}
+%{0pt}{5.5ex plus 1ex minus .2ex}{4.3ex plus .2ex}
+
+\setlength{\parskip}{0cm}
+\setlength{\parindent}{1em}
+\usepackage[compact]{titlesec}
+\titlespacing{\section}{0pt}{4ex}{1ex}
+\titlespacing{\subsection}{0pt}{2ex}{0ex}
+\titlespacing{\subsubsection}{0pt}{1ex}{0ex}
+
+\usepackage[nodisplayskipstretch]{setspace}
+%\setlength{\abovedisplayskip}{0pt} \setlength{\abovedisplayshortskip}{0pt}
+%\setlength{\belowdisplayskip}{0pt} \setlength{\belowdisplayshortskip}{0pt}
+%\titlespacing{\subsubsection}{0pt}{1ex}{0ex}
+
+\usepackage[bindingoffset=6mm]{geometry}
+
 % moje libki end
 
 

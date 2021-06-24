@@ -1,14 +1,14 @@
-\chapter{Badania} \label{przeg}
-W tym rozdziale opisano przeprowadzone na kodzie badania. Zaczęto od opisania konkretnych problemów którymi się zajmowano, a następnie przeprowadzono badania mające potwierdzić czy algorytmy działają poprawnie. Na koniec przebadano zachowanie zaimplementowanych filtrów pod różnymi kątami.
+\chapter{Badania symulacyjne} \label{przeg}
+W tym rozdziale opisano przeprowadzone badania symulacyjne. Zaczęto od opisania konkretnych problemów którymi się zajmowano, a następnie przeprowadzono badania mające potwierdzić czy algorytmy działają poprawnie. Na koniec przebadano zachowanie zaimplementowanych filtrów pod różnymi kątami.
 \section{Opis poszczególnych problemów}
-W badaniach zajęto się dwoma problemami wyznaczania lokalizacji. Pierwszy polega na ustalenie pozycji robota na podstawie pomiaru odległości od ściany, drugi na ustalenie pozycji samolotu na podstawie pomiaru wysokości. W oby przypadkach znano mapę środowiska w którym się znajdowały.
+W badaniach zajęto się dwoma problemami wyznaczania lokalizacji. Pierwszy polega na ustaleniu pozycji robota na podstawie pomiaru odległości od ściany, drugi na ustaleniu pozycji samolotu na podstawie pomiaru wysokości. W obu przypadkach znano mapę otoczenia w którym znajdowały się obiekty. Faktyczna pozycja robota była zawsze oznaczana przez czerwoną kropkę, estymowana pozycja przez żółtą, natomiast cząstki oznaczano na niebiesko.
 \subsection{Robot w pomieszczeniu} \label{robot_w_pomieszczeniu_desc}
 Stan robota w pomieszczeniu opisano czterema liczbami:
 \begin{equation*}
 	x = \{p_x,p_y,\theta,v\}
 \end{equation*}
-gdzie $p_x$ i $p_y$ to pozycja robota, $\theta$ jest jego orientacją, natomiast $v$ prędkością. Pomiar odległości od ściany był zawsze wykonywany w kierunku $\theta$, i miał Gaussowski rozkład. Mapa jest kwadratowym pokojem o wymiarach $1000$ na $1000$ jednostek, wypełnionym kołami o różnych średnicach, oraz ograniczany prostymi. Na rysunku \ref{przykladowa_mapa_pokoju} przedstawiono przykładową mapę.\\
-O ile nie będzie napisane inaczej, robot zaczynał na środku mapy, miał prędkość 10 jednostek na iterację, i skręcał w lewo o $0.1rad$ na krok. Faktyczna pozycja robota była oznaczana przez czerwoną kropkę, estymowana pozycja przez żółtą, natomiast cząstki oznaczano na niebiesko.
+gdzie $p_x$ i $p_y$ to pozycja robota, $\theta$ jest jego orientacją, natomiast $v$ prędkością. Pomiar odległości od ściany był zawsze wykonywany w kierunku $\theta$, i miał Gaussowski rozkład. Mapa jest kwadratowym pokojem o wymiarach $1000$ na $1000$ jednostek, wypełnionym kołami o różnych średnicach, oraz ograniczony prostymi. Na rysunku \ref{przykladowa_mapa_pokoju} przedstawiono przykładową mapę.\\
+O ile nie będzie napisane inaczej, robot zaczynał na środku mapy, miał prędkość 10 jednostek na iterację, i skręcał w lewo o $0.1rad$ na krok.
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=10cm]{./przykladowa_mapa_pokoju.png}
@@ -21,16 +21,16 @@ Stan samolotu opisano tak samo jak stan robota w rozdziale \ref{robot_w_pomieszc
 \begin{equation*}
 	x = \{p_x,p_y,\theta,v\}
 \end{equation*}
-Mapa jest natomiast mapą wysokościową, w tym przypadku zdecydowano się na dwa warianty, pierwszy jest mapą fragmentu Wrocławia (przykład widoczny na rysunku \ref{przykladowa_mapa_wroclawia}), natomiast drugą wygenerowano jako szum, którego zmienność można kontrolować (przykład widoczny na rysunku \ref{przykladowa_mapa_szumu}).\\
+Mapa jest natomiast mapą wysokościową, w tym przypadku zdecydowano się na dwa warianty, pierwszy jest mapą fragmentu Wrocławia (przykład widoczny na rysunku \ref{przykladowa_mapa_wroclawia}), natomiast drugi jest wygenerowanym szumem, którego zmienność można kontrolować (przykład widoczny na rysunku \ref{przykladowa_mapa_szumu}).\\
 O ile nie będzie napisane inaczej, samolot w lewym dolnym rogu mapy, miał prędkość 10 jednostek na iterację, i nie zmieniał orientacji $\theta=\frac{\pi}{4}$.
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=10cm]{./przykladowa_mapa_wroclawia.png}
-		\caption{Mapa wysokościowa fragmentu Wrocławia}
+		\caption{Mapa wysokościowa fragmentu Wrocławia \cite{geoportal}}
 		\label{przykladowa_mapa_wroclawia}
 	\end{center}
-\end{figure}
-\begin{figure}[H]
+%\end{figure}
+%\begin{figure}[H]
 \begin{center}
 	\includegraphics[width=10cm]{./przykladowa_mapa_szumu.png}
 	\caption{Przykładowa mapa wysokościowa uzyskana z szumu}
@@ -39,7 +39,7 @@ O ile nie będzie napisane inaczej, samolot w lewym dolnym rogu mapy, miał prę
 \end{figure}
 
 \section{Badania poprawności działania}
-W tym rozdziale zajęto się badaniami mającymi potwierdzić poprawne działanie zaimplementowanego rozwiązania. Na początku sprawdzono, jak zmiana generatora liczb losowych wpłynęła na wyniki, następnie sprawdzono, jak poradzi sobie algorytm przy braku punktów odniesienia, potem co się dzieje przy braku ewolucji systemu ($v=0$). Nie skupiano się no konkretnych wartościach liczbowych, jedynie wizualnie oceniano wyniki.
+W tym rozdziale zajęto się badaniami mającymi potwierdzić poprawne działanie zaimplementowanego rozwiązania. Na początku sprawdzono, jak zmiana generatora liczb losowych wpłynęła na wyniki, następnie sprawdzono, jak poradzi sobie algorytm przy braku punktów odniesienia, potem co się dzieje przy braku ewolucji systemu ($v=0$). Nie skupiano się na konkretnych wartościach liczbowych, jedynie wizualnie oceniano wyniki.
 
 \subsection{Wpływ generatora}
 Przebadano trzy generatory wbudowane w język C++: domyślny linear congruential generator(LCG) \cite{lcg_wiki}, Mersenne Twister \cite{mersenne_wiki} oraz wbudowany niedeterministyczny generator. Populacja cząstek wynosiła $N=1000$. Wyniki rysowano po 1, 11 i 21 iteracjach filtra(nr iteracji oznaczano jako $k$). Wyniki przedstawiono na rysunkach \ref{lcg_example}, \ref{mersenne_example}, \ref{device_example}. Jak widać dla wszystkich generatorów wyniki są niemal takie same, i zbiegają do faktycznego położenia robota. Ponieważ dla każdego generatora uzyskano poprawne wyniki, w dalszych badaniach korzystano z~generatora LCG ponieważ jest najprostszy, i, co za tym idzie, najszybszy.
@@ -58,9 +58,9 @@ Przebadano trzy generatory wbudowane w język C++: domyślny linear congruential
 		\caption{Przykładowe wyniki dla generatora Mersenne Twister}
 		\label{mersenne_example}
 	\end{center}
-\end{figure}
+%\end{figure}
 
-\begin{figure}[H]
+%\begin{figure}[H]
 \begin{center}
 	\includegraphics[width=15cm]{./device_example.png}
 	\caption{Przykładowe wyniki dla niedeterministycznego generatora}
@@ -70,7 +70,7 @@ Przebadano trzy generatory wbudowane w język C++: domyślny linear congruential
 
 
 \subsection{Niejednoznaczna mapa}
-W tym przypadku zbadano jak zachowa się filtr przy braku punktów odniesienia. W~kwadratowym pokoju, powinno to spowodować pojawienie się czterech równie prawdopodobnych pozycji. Jak widać przewidywania potwierdziły się na rysunku \ref{no_pivot}. Na rysunku \ref{one_pivot} przedstawiono sytuację, gdy mapa dopuszcza dwie możliwe pozycja. Badania przeprowadzono przy populacji $N=10000$ cząstek.
+W tym przypadku zbadano jak zachowa się filtr przy braku punktów odniesienia. W~kwadratowym pokoju, powinno to spowodować pojawienie się czterech równie prawdopodobnych pozycji. Jak widać przewidywania potwierdziły się na rysunku \ref{no_pivot}. Na rysunku \ref{one_pivot} przedstawiono sytuację, gdy mapa dopuszcza dwie możliwe pozycje. Badania przeprowadzono przy populacji $N=10000$ cząstek.
 
 \begin{figure}[H]
 	\begin{center}
@@ -89,25 +89,25 @@ W tym przypadku zbadano jak zachowa się filtr przy braku punktów odniesienia. 
 \end{figure}
 
 \subsection{Brak ewolucji systemu}
-Tutaj Zbadano, co się dzieje, gdy system nie ewoluuje. Spodziewano się, pojawią się izohipsy, przynajmniej na początku, nim populacja nie stanie się zbyt zdegenerowana. Badania przeprowadzono dla populacji o rozmiarze $N=100000$. Jak widać na rysunkach \ref{stationary} i \ref{stationary_plane} przewidywania się spełniły, dodatkowo dla rysunku \ref{stationary_plane} dobrze widać problem się degeneracji. Problem ten można rozwiązać dzięki podejściu z rozdziału \ref{evol_chap}, które zademonstrowano na rysunku \ref{stationary_evol}, na którym widać jak wychwycone zostały obszary na tej samej wysokości.
+Zbadano, co się dzieje, gdy system nie ewoluuje. Spodziewano się, że pojawią się izolinie(w tym przypadku będą to krzywe/obszary dla których stała będzie wartość pomiaru), przynajmniej na początku, nim populacja nie stanie się zbyt zdegenerowana. Badania przeprowadzono dla populacji o rozmiarze $N=100000$. Jak widać na rysunkach \ref{stationary} i \ref{stationary_plane} przewidywania się spełniły, dodatkowo dla rysunku \ref{stationary_plane} dobrze widać problem pojawiającej się degeneracji. Problem ten można rozwiązać dzięki podejściu z rozdziału \ref{evol_chap}, które zademonstrowano na rysunku \ref{stationary_evol}, na którym widać jak wychwycone zostały obszary na tej samej wysokości.
 
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=15cm]{./stationary.png}
-		\caption{Przykładowe wyniki przy braku ewolucji systemu, dla robota w pokoju.}
+		\caption{Przykładowe wyniki przy braku ewolucji systemu, dla robota w~pokoju}
 		\label{stationary}
 	\end{center}
-\end{figure}
+%\end{figure}
 
-\begin{figure}[H]
+%\begin{figure}[H]
 \begin{center}
 	\includegraphics[width=15cm]{./stationary_plane.png}
-	\caption{Przykładowe wyniki przy braku ewolucji systemu, dla samolotu.}
+	\caption{Przykładowe wyniki przy braku ewolucji systemu, dla samolotu}
 	\label{stationary_plane}
 \end{center}
-\end{figure}
+%\end{figure}
 
-\begin{figure}[H]
+%\begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=15cm]{./stationary_evol.png}
 		\caption{Przykładowe wyniki przy braku ewolucji systemu, dla samolotu, przy zmodyfikowanym algorytmie}
@@ -120,7 +120,7 @@ Tutaj Zbadano, co się dzieje, gdy system nie ewoluuje. Spodziewano się, pojawi
 %powinien pozostać jednostajny szum
 
 \section{Wpływ sposobu estymowania położenia}
-Przebadano trzy metody estymowania położenia: średnią ważoną cząstek, średnią ważoną 10\% najlepszych cząstek, najlepszą cząstkę. Badania przeprowadzono na populacji 300 cząstek. Na wykresie \ref{wplyw_est} przedstawiono wyniki, z których wynika, że między średnią ważoną z najlepszych 10\% i najlepszym osobnikiem nie ma większej różnicy, natomiast średnia ważona populacji jest troszkę lepsza niż pozostałe dwa rozwiązania.
+Przebadano trzy metody estymowania położenia: średnią ważoną cząstek, średnią ważoną 10\% najlepszych cząstek, najlepszą cząstkę. Badania przeprowadzono na populacji 300 cząstek. Na wykresie \ref{wplyw_est} przedstawiono rezultaty z których wynika, że między średnią ważoną z najlepszych 10\% i najlepszym osobnikiem nie ma większej różnicy, natomiast średnia ważona populacji jest nieco lepsza niż pozostałe dwa rozwiązania.
 
 \begin{figure}[H]
 	\begin{center}
@@ -138,15 +138,15 @@ Zbadano wpływ liczby cząstek na jakość estymacji. Badania przeprowadzono dla
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=12cm]{./wplyw_N.png}
-		\caption{Wpływ liczby cząstek na jakość estymacji dla robota w pokoju.}
+		\caption{Wpływ liczby cząstek na jakość estymacji dla robota w pokoju}
 		\label{wplyw_N}
 	\end{center}
-\end{figure}
+%\end{figure}
 
-\begin{figure}[H]
+%\begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=12cm]{./dynamic_N.png}
-		\caption{Wpływ dynamicznej zmiany liczby cząstek na jakość estymacji dla robota w pokoju.}
+		\caption{Wpływ dynamicznej zmiany liczby cząstek na jakość estymacji dla robota w pokoju}
 		\label{dynamic_N}
 	\end{center}
 \end{figure}
@@ -156,7 +156,7 @@ W tym rozdziale zbadano wpływ szumu na jakość estymacji. Przebadano trzy rodz
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=12cm]{./wplyw_szumu.png}
-		\caption{Wpływ zaszumienia pomiaru na jakość estymacji dla robota w pokoju.}
+		\caption{Wpływ zaszumienia pomiaru na jakość estymacji dla robota w~pokoju}
 		\label{wplyw_szumu}
 	\end{center}
 \end{figure}
@@ -164,21 +164,21 @@ W tym rozdziale zbadano wpływ szumu na jakość estymacji. Przebadano trzy rodz
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=12cm]{./wplyw_szumu_ori.png}
-		\caption{Wpływ zaszumienia odczytu zmiany orientacji na jakość estymacji dla robota w pokoju.}
+		\caption{Wpływ zaszumienia odczytu zmiany orientacji na jakość estymacji dla robota w pokoju}
 		\label{wplyw_szumu_ori}
 	\end{center}
-\end{figure}
+%\end{figure}
 
-\begin{figure}[H]
+%\begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=12cm]{./blad_staly.png}
-		\caption{Wpływ pojawienia się systematycznego błędu pomiaru na jakość estymacji dla robota w~pokoju.}
+		\caption{Wpływ pojawienia się systematycznego błędu pomiaru na jakość estymacji dla robota w~pokoju}
 		\label{blad_staly}
 	\end{center}
 \end{figure}
 
 \section{Wpływ metody próbkowania}
-Przebadano dwie metody próbkowania: najpopularniejszy stochastic universal sampling \cite{sus_wiki} (SUS), z którego się korzysta ze względu na niską złożoność obliczeniową, oraz roulette sampling \cite{rou_wiki}. Badania przeprowadzono dla trzech różnych rozmiarów populacji: 100,300,1000, wyniki uśredniając po 100 razy. Jak widać, SUS daje zazwyczaj lepsze wyniki, zwłaszcza dla niewielkich populacji. 
+Przebadano dwie metody próbkowania: najpopularniejszy stochastic universal sampling \cite{sus_wiki} (SUS), z którego korzysta się ze względu na niską złożoność obliczeniową, oraz roulette sampling \cite{rou_wiki}. Badania przeprowadzono dla trzech różnych rozmiarów populacji: 100,300,1000, wyniki uśredniając po 100 razy. Jak widać, SUS daje zazwyczaj lepsze wyniki, zwłaszcza dla niewielkich populacji. 
 
 \begin{figure}[H]
 	\begin{center}
@@ -190,53 +190,53 @@ Przebadano dwie metody próbkowania: najpopularniejszy stochastic universal samp
 
 
 \section{Skuteczność w poprawianiu błędnie określonego położenia}
-Sprawdzono zachowanie filtra w sytuacji, gdy w jakiś sposób nie poradzi sobie o określeniem położenia, i zgubi się. Wyniki widać na rysunku \ref{lost}. Można zaobserwować, iż algorytm jest w stanie odszukać faktyczny stan, jednak jest to bardziej kwestia szczęścia. Podejście opisane w~rozdziale \ref{evol_chap} jest w~stanie delikatnie poprawić rozwiązanie, jednak nie jest ono tak skuteczne jak przeszukanie od nowa całej przestrzeni stanów jak to się robi w przypadku algorytmu opisanego w rozdziale \ref{bpf_chapter}.
+Sprawdzono zachowanie filtra w sytuacji, gdy w jakiś sposób nie poradzi sobie z określeniem położenia i zgubi się. Wyniki widać na rysunku \ref{lost}. Można zaobserwować, iż algorytm jest w stanie odszukać faktyczny stan, jednak jest to bardziej kwestia szczęścia. Podejście opisane w~rozdziale \ref{evol_chap} jest w~stanie delikatnie poprawić rozwiązanie, jednak nie jest ono tak skuteczne jak przeszukanie od nowa całej przestrzeni stanów jak to się robi w przypadku algorytmu opisanego w rozdziale \ref{bpf_chapter}.
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=15cm]{./lost.png}
-		\caption{Sprawdzenie jak filtr radzi sobie w sytuacji gdy nie ma cząstek w pobliży faktycznego stanu.}
+		\caption{Sprawdzenie jak filtr radzi sobie w sytuacji gdy nie ma cząstek w pobliżu faktycznego stanu}
 		\label{lost}
 	\end{center}
 \end{figure}
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=15cm]{./lost_evol.png}
-		\caption{Sprawdzenie jak zmodyfikowany filtr radzi sobie w sytuacji gdy nie ma cząstek w pobliży faktycznego stanu.}
+		\caption{Sprawdzenie jak zmodyfikowany filtr radzi sobie w sytuacji gdy nie ma cząstek w pobliżu faktycznego stanu}
 		\label{lost_evol}
 	\end{center}
 \end{figure}
 \section{Wpływ zmienności mapy} \label{zmienna_mapa_chap}
-W problemie robota w pokoju pomiary które może zbierać robot zazwyczaj nie zmieniają się znacząco, przy niewielkich zmianach stanu. Zupełnie inaczej jest w problemie samolotu w locie, gdzie przesunięcie o 10 jednostek daje w zasadzie losowe pomiary. Na rysunku \ref{pf_plane} widać przykładową realizację podstawowego algorytmu dla tego problemu. Mimo iż liczba cząstek wyniosła $N=10000$ algorytm nie jest w stanie dokładnie określić położenia. Na rysunku \ref{bpf_plane_wro} zaprezentowano jak BPF opisany w rozdziale \ref{bpf_chapter} radzi sobie z tym problemem, liczba cząstek wyniosła $N=961$. Jak widać, wyniki są nieporównywalnie lepsze niż w przypadku podstawowego algorytmu.
+W problemie robota w pokoju, pomiary, które może zbierać robot, zazwyczaj nie zmieniają się znacząco, przy niewielkich zmianach stanu. Zupełnie inaczej jest w problemie samolotu w locie, gdzie przesunięcie o 10 jednostek daje w zasadzie losowe pomiary. Na rysunku \ref{pf_plane} widać przykładową realizację podstawowego algorytmu dla tego problemu. Mimo iż liczba cząstek wyniosła $N=10000$ algorytm nie jest w stanie dokładnie określić położenia. Na rysunku \ref{bpf_plane_wro} zaprezentowano jak BPF opisany w rozdziale \ref{bpf_chapter} radzi sobie z tym problemem, liczba cząstek wyniosła $N=961$. Jak widać, wyniki są nieporównywalnie lepsze niż w przypadku podstawowego algorytmu.
 \begin{figure}[H]
 	\begin{center}
-		\includegraphics[width=11cm]{./pf_plane.png}
-		\caption{Przykład zastosowania podstawowego algorytmu do problemu samolotu w~locie.}
+		\includegraphics[width=10cm]{./pf_plane.png}
+		\caption{Przykład zastosowania podstawowego algorytmu do problemu samolotu w~locie}
 		\label{pf_plane}
 	\end{center}
-\end{figure}
-\begin{figure}[H]
+%\end{figure}
+%\begin{figure}[H]
 	\begin{center}
-		\includegraphics[width=15cm]{./bpf_plane_wro.png}
-		\caption{Przykład zastosowania BPF do problemu samolotu w locie.}
+		\includegraphics[width=14cm]{./bpf_plane_wro.png}
+		\caption{Przykład zastosowania BPF do problemu samolotu w locie}
 		\label{bpf_plane_wro}
 	\end{center}
 \end{figure}
 
 
 \section{Zastosowanie BPF do problemu robota w pokoju}
-Na koniec podjęto próbę zastosowania BPF do problemu robota w pokoju. Przykład realizacji jest widoczny na rysunku \ref{bpf_robot_2d}. Jak widać, wyniki są bardzo obiecujące, zwłaszcza, gdy się spojrzy na rysunek \ref{bpf_robot_2d_err}, gdzie porównano oba BPF z podstawowym algorytmem (na pojedynczym uruchomieniu), a na którym widać iż BPF daje o wiele lepsze wyniki. Należy zauważyć iż podczas uruchamiania BPF dawał zazwyczaj takie same wyniki dla wszystkich uruchomień, natomiast podstawowy algorytm znacząco zmieniał się za każdym razem.
+Na koniec podjęto próbę zastosowania BPF do problemu robota w pokoju. Przykład realizacji jest widoczny na rysunku \ref{bpf_robot_2d}. Jak widać, wyniki są bardzo obiecujące, zwłaszcza, gdy spojrzy się na rysunek \ref{bpf_robot_2d_err}, gdzie porównano BPF z~podstawowym algorytmem (na pojedynczym uruchomieniu), a na którym widać, iż BPF daje o wiele lepsze wyniki. Należy zauważyć, że podczas uruchamiania BPF dawał zazwyczaj takie same wyniki dla wszystkich uruchomień, natomiast podstawowy algorytm znacząco zmieniał się za każdym razem.
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=12cm]{./bpf_robot_2d.png}
-		\caption{Przykład zastosowania BPF do problemu robota w pokoju.}
+		\caption{Przykład zastosowania BPF do problemu robota w pokoju}
 		\label{bpf_robot_2d}
 	\end{center}
-\end{figure}
+%\end{figure}
 
-\begin{figure}[H]
+%\begin{figure}[H]
 	\begin{center}
-		\includegraphics[width=12cm]{./bpf_robot_2d_err.png}
-		\caption{Porównanie BPF i podstawowej wersji dla problemu robota w pokoju.}
+		\includegraphics[width=11cm]{./bpf_robot_2d_err.png}
+		\caption{Porównanie BPF i podstawowej wersji dla problemu robota w~pokoju}
 		\label{bpf_robot_2d_err}
 	\end{center}
 \end{figure}
